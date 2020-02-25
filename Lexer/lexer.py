@@ -16,23 +16,17 @@ def getToken(imprime = True):
         simbolos = next(f).split('|')
         M = [[int(x) for x in line.split()] for line in f]
 
-    #f = open('ejemplo.txt', 'r')
     archivo = programa
     longitud = progLong
     global p
-    estado = 0
+    state = 0
     token = ''
-
-    #print("\nToken                      Tipo\n")
 
     #Save the simbols to a map.
     mapa ={}
     for i in range(len(simbolos)):
         for c in simbolos[i]:
             mapa[c] = i
-
-    #Define the counter.
-    
 
     #Traverse the array till an EOF is encountered.
     while c != '$':
@@ -45,23 +39,24 @@ def getToken(imprime = True):
         if (c == "$"):
             return TokenType.ENDFILE, "$"
         
-        if(c == '\n' and estado == 9):
-            estado = 9
+        # Add to the comments the EOL if needed.
+        if(c == '\n' and state == 9):
+            state = 9
 
-        estado = M[estado][mapa[c]]
+        state = M[state][mapa[c]]
              
-        if(estado == 2):
+        if(state == 2):
             # NUM      
             t = token
             printToken(t, "NUM", imprime)
             token = ''
-            estado = 0
+            state = 0
             return TokenType.NUM, t 
-        elif(estado == 4):
+        elif(state == 4):
             # ID
             t = token
             token = ''
-            estado = 0
+            state = 0
 
             if t in reserved_keywords:
                 printToken(t, "RESERVED", imprime)
@@ -69,187 +64,187 @@ def getToken(imprime = True):
             else:
                 printToken(t, "ID", imprime)
                 return TokenType.ID, t
-        elif(estado == 5):
+        elif(state == 5):
             # + 
             t = token
             printToken(c, "PLUS", imprime)
             token = ''
-            estado = 0
+            state = 0
             p = p + 1
             c = archivo[p]
             return TokenType.PLUS, t
-        elif(estado == 6):
+        elif(state == 6):
             # - 
             t = token
             printToken(c, "MINUS", imprime)
             token = ''
-            estado = 0
+            state = 0
             p = p + 1
             c = archivo[p]
             return TokenType.MINUS, t
-        elif(estado == 7):
+        elif(state == 7):
             # * 
             token += c
             t = token
             printToken(t, "MULT", imprime)
             token = ''
-            estado = 0
+            state = 0
             p = p + 1
             c = archivo[p]
             return TokenType.MULT, t
-        elif(estado == 11):
+        elif(state == 11):
             # /* comment */
             token += c
             t = token
             printToken(t, "COMMENT", imprime)
             token = ''
-            estado = 0
+            state = 0
             p = p + 1
             c = archivo[p]
             return TokenType.COMMENT, t
-        elif(estado == 12):
+        elif(state == 12):
             # Division
             t = token
             printToken(t, "DIVISION", imprime)
             token = ''
-            estado = 0
+            state = 0
             return TokenType.DIVISION, t
-        elif(estado == 14):
+        elif(state == 14):
             # >= 
             token += c
             t = token
             printToken(t, "GREATER EQUAL", imprime)
             token = ''
-            estado = 0
+            state = 0
             p = p + 1
             c = archivo[p]
             return TokenType.GREATER_EQUAL, t
-        elif(estado == 15):
+        elif(state == 15):
             # > 
             t = token
             printToken(t, "GREATER", imprime)
             token = ''
-            estado = 0
+            state = 0
             return TokenType.GREATER, t
-        elif(estado == 17):
+        elif(state == 17):
             # < 
             token += c
             t = token
             printToken(t, "LESS EQUAL", imprime)
             token = ''
-            estado = 0
+            state = 0
             p = p + 1
             c = archivo[p]
             return TokenType.LESS_EQUAL, t
-        elif(estado == 18):
+        elif(state == 18):
             # < 
             t = token
             printToken(t, "LESS", imprime)
             token = ''
-            estado = 0
+            state = 0
             return TokenType.LESS, t
-        elif(estado == 20):
+        elif(state == 20):
             # ==
             token += c
             t = token
             printToken(t, "EQUALS TO", imprime)
             token = ''
-            estado = 0
+            state = 0
             p = p + 1
             c = archivo[p]
             return TokenType.EQUALS_TO, t
-        elif(estado == 21):
+        elif(state == 21):
             # =
             t = token
             printToken(t, "EQUAL", imprime)
             token = ''
-            estado = 0
+            state = 0
             p = p + 1
             c = archivo[p]
             return TokenType.EQUAL, t
-        elif(estado == 23):
+        elif(state == 23):
             # !=
             token += c
             t = token
             printToken(t, "DIFFERENT", imprime)
             token = ''
-            estado = 0
+            state = 0
             p = p + 1
             c = archivo[p]
             return TokenType.DIFFERENT, t
-        elif(estado == 24):
+        elif(state == 24):
             # ;
             t = token
             printToken(c, "SEMICOLON", imprime)
             token = ''
-            estado = 0
+            state = 0
             p += 1
             c = archivo[p]
             return TokenType.SEMICOLON, t
-        elif(estado == 25):
+        elif(state == 25):
             # ,
             t = token
             printToken(c, "COMMA", imprime)
             token = ''
-            estado = 0
+            state = 0
             p += 1
             c = archivo[p]
             return TokenType.COMMA, t
-        elif(estado == 26):
+        elif(state == 26):
             # (
             t = token
             printToken(c, "OPEN_BRACKETS", imprime)
             token = ''
-            estado = 0
+            state = 0
             p += 1
             c = archivo[p]
             return TokenType.OPEN_BRACKETS, t
-        elif(estado == 27):
+        elif(state == 27):
             # )
             t = token
             printToken(c, "CLOSE_BRACKETS", imprime)
             token = ''
-            estado = 0
+            state = 0
             p += 1
             c = archivo[p]
             return TokenType.CLOSE_BRACKETS, t
-        elif(estado == 28):
+        elif(state == 28):
             # (
             t = token
             printToken(c, "OPEN_SQUARE_BRACKETS", imprime)
             token = ''
-            estado = 0
+            state = 0
             p += 1
             c = archivo[p]
             return TokenType.OPEN_SQUARE_BRACKETS, t
-        elif(estado == 29):
+        elif(state == 29):
             # )
             t = token
             printToken(c, "CLOSE_SQUARE_BRACKETS", imprime)
             token = ''
-            estado = 0
+            state = 0
             p += 1
             c = archivo[p]
             return TokenType.CLOSE_SQUARE_BRACKETS, t
-        elif(estado == 30):
+        elif(state == 30):
             # (
             t = token
             printToken(c, "OPEN_CURLY_BRACKETS", imprime)
             token = ''
-            estado = 0
+            state = 0
             p += 1
             c = archivo[p]
             return TokenType.OPEN_CURLY_BRACKETS, t
-        elif(estado == 31):
+        elif(state == 31):
             # )
             t = token
             printToken(c, "CLOSE_CURLY_BRACKETS", imprime)
             token = ''
-            estado = 0
+            state = 0
             p += 1
             c = archivo[p]
             return TokenType.CLOSE_CURLY_BRACKETS, t
-        elif(estado == 33):
+        elif(state == 33):
             # ERROR
             t = token
             printToken(t, "ERROR", imprime)
@@ -257,9 +252,9 @@ def getToken(imprime = True):
             detectIntegerError(t)
 
             token = ''
-            estado = 0
+            state = 0
             return TokenType.ERROR, t
-        elif estado != 0:
+        elif state != 0:
             #Get all the char and save them to the tokens.
             token += c
             #Add to the counter.
@@ -277,15 +272,15 @@ def printToken(t, tokenType, imprime):
 def detectIntegerError(lookup):
     lookup = lookup.replace('$', '').translate({ord(i): None for i in ' '})
     i = 0
-    for item in programa.split("\n"):
+    for line in programa.split("\n"):
         i = i + 1
         indicator = ""
-        if lookup in item:
-            errorIndex = item.index(lookup)
+        if lookup in line:
+            errorIndex = line.index(lookup)
             indicator += (' '*errorIndex) + "^"
             print("\nTraceback (most recent call last):")
-            print ("Linea ", i ,": Error en la formación de un entero:")
-            print(item.replace('$', ''))
+            print ("Linea ", i ,": Error in the formation of an integer:")
+            print(line.replace('$', ''))
             print(indicator)
 
         
