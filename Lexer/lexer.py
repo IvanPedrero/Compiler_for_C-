@@ -48,7 +48,7 @@ def getToken(imprime = True):
         if(state == 2):
             # NUM      
             t = token
-            printToken(t, "NUM", imprime)
+            printToken(t, TokenType.NUM, imprime)
             token = ''
             state = 0
             return TokenType.NUM, t 
@@ -59,15 +59,15 @@ def getToken(imprime = True):
             state = 0
 
             if t in reserved_keywords:
-                printToken(t, "RESERVED", imprime)
+                printToken(t, getReservedKeyWord(t), imprime)
                 return TokenType.RESERVED, t
             else:
-                printToken(t, "ID", imprime)
+                printToken(t, TokenType.ID, imprime)
                 return TokenType.ID, t
         elif(state == 5):
             # + 
             t = token
-            printToken(c, "PLUS", imprime)
+            printToken(c, TokenType.PLUS, imprime)
             token = ''
             state = 0
             p = p + 1
@@ -76,7 +76,7 @@ def getToken(imprime = True):
         elif(state == 6):
             # - 
             t = token
-            printToken(c, "MINUS", imprime)
+            printToken(c, TokenType.MINUS, imprime)
             token = ''
             state = 0
             p = p + 1
@@ -86,7 +86,7 @@ def getToken(imprime = True):
             # * 
             token += c
             t = token
-            printToken(t, "MULT", imprime)
+            printToken(t, TokenType.MULT, imprime)
             token = ''
             state = 0
             p = p + 1
@@ -96,7 +96,7 @@ def getToken(imprime = True):
             # /* comment */
             token += c
             t = token
-            printToken(t, "COMMENT", imprime)
+            printToken(t, TokenType.COMMENT, imprime)
             token = ''
             state = 0
             p = p + 1
@@ -105,7 +105,7 @@ def getToken(imprime = True):
         elif(state == 12):
             # Division
             t = token
-            printToken(t, "DIVISION", imprime)
+            printToken(t, TokenType.DIVISION, imprime)
             token = ''
             state = 0
             return TokenType.DIVISION, t
@@ -113,7 +113,7 @@ def getToken(imprime = True):
             # >= 
             token += c
             t = token
-            printToken(t, "GREATER EQUAL", imprime)
+            printToken(t, TokenType.GREATER_EQUAL, imprime)
             token = ''
             state = 0
             p = p + 1
@@ -122,7 +122,7 @@ def getToken(imprime = True):
         elif(state == 15):
             # > 
             t = token
-            printToken(t, "GREATER", imprime)
+            printToken(t, TokenType.GREATER, imprime)
             token = ''
             state = 0
             return TokenType.GREATER, t
@@ -130,7 +130,7 @@ def getToken(imprime = True):
             # < 
             token += c
             t = token
-            printToken(t, "LESS EQUAL", imprime)
+            printToken(t, TokenType.LESS_EQUAL, imprime)
             token = ''
             state = 0
             p = p + 1
@@ -139,7 +139,7 @@ def getToken(imprime = True):
         elif(state == 18):
             # < 
             t = token
-            printToken(t, "LESS", imprime)
+            printToken(t, TokenType.LESS, imprime)
             token = ''
             state = 0
             return TokenType.LESS, t
@@ -147,7 +147,7 @@ def getToken(imprime = True):
             # ==
             token += c
             t = token
-            printToken(t, "EQUALS TO", imprime)
+            printToken(t, TokenType.EQUALS_TO, imprime)
             token = ''
             state = 0
             p = p + 1
@@ -156,7 +156,7 @@ def getToken(imprime = True):
         elif(state == 21):
             # =
             t = token
-            printToken(t, "EQUAL", imprime)
+            printToken(t, TokenType.EQUAL, imprime)
             token = ''
             state = 0
             p = p + 1
@@ -166,7 +166,7 @@ def getToken(imprime = True):
             # !=
             token += c
             t = token
-            printToken(t, "DIFFERENT", imprime)
+            printToken(t, TokenType.DIFFERENT, imprime)
             token = ''
             state = 0
             p = p + 1
@@ -175,7 +175,7 @@ def getToken(imprime = True):
         elif(state == 24):
             # ;
             t = token
-            printToken(c, "SEMICOLON", imprime)
+            printToken(c, TokenType.SEMICOLON, imprime)
             token = ''
             state = 0
             p += 1
@@ -184,7 +184,7 @@ def getToken(imprime = True):
         elif(state == 25):
             # ,
             t = token
-            printToken(c, "COMMA", imprime)
+            printToken(c, TokenType.COMMA, imprime)
             token = ''
             state = 0
             p += 1
@@ -193,7 +193,7 @@ def getToken(imprime = True):
         elif(state == 26):
             # (
             t = token
-            printToken(c, "OPEN_BRACKETS", imprime)
+            printToken(c, TokenType.OPEN_BRACKETS, imprime)
             token = ''
             state = 0
             p += 1
@@ -202,7 +202,7 @@ def getToken(imprime = True):
         elif(state == 27):
             # )
             t = token
-            printToken(c, "CLOSE_BRACKETS", imprime)
+            printToken(c, TokenType.CLOSE_BRACKETS, imprime)
             token = ''
             state = 0
             p += 1
@@ -211,7 +211,7 @@ def getToken(imprime = True):
         elif(state == 28):
             # (
             t = token
-            printToken(c, "OPEN_SQUARE_BRACKETS", imprime)
+            printToken(c, TokenType.OPEN_SQUARE_BRACKETS, imprime)
             token = ''
             state = 0
             p += 1
@@ -220,7 +220,7 @@ def getToken(imprime = True):
         elif(state == 29):
             # )
             t = token
-            printToken(c, "CLOSE_SQUARE_BRACKETS", imprime)
+            printToken(c, TokenType.CLOSE_SQUARE_BRACKETS, imprime)
             token = ''
             state = 0
             p += 1
@@ -229,7 +229,7 @@ def getToken(imprime = True):
         elif(state == 30):
             # (
             t = token
-            printToken(c, "OPEN_CURLY_BRACKETS", imprime)
+            printToken(c, TokenType.OPEN_CURLY_BRACKETS, imprime)
             token = ''
             state = 0
             p += 1
@@ -238,7 +238,7 @@ def getToken(imprime = True):
         elif(state == 31):
             # )
             t = token
-            printToken(c, "CLOSE_CURLY_BRACKETS", imprime)
+            printToken(c, TokenType.CLOSE_CURLY_BRACKETS, imprime)
             token = ''
             state = 0
             p += 1
@@ -247,7 +247,7 @@ def getToken(imprime = True):
         elif(state == 33):
             # ERROR
             t = token
-            printToken(t, "ERROR", imprime)
+            printToken(t, TokenType.ERROR, imprime)
             
             detectIntegerError(t)
 
@@ -267,7 +267,7 @@ def getToken(imprime = True):
 
 def printToken(t, tokenType, imprime):
     if imprime:
-        print(t," = ",tokenType)
+        print(t," = ",tokenType.name)
 
 def detectIntegerError(lookup):
     lookup = lookup.replace('$', '').translate({ord(i): None for i in ' '})
@@ -282,5 +282,3 @@ def detectIntegerError(lookup):
             print ("Linea ", i ,": Error in the formation of an integer:")
             print(line.replace('$', ''))
             print(indicator)
-
-        
