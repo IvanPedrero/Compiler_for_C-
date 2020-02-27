@@ -6,6 +6,8 @@ def globales(prog,pos,long):
     global p
     global progLong
     programa = prog
+    # Avoid not reading last character adding an space before the EOF.
+    programa = programa.replace('$', ' $')
     p = pos
     progLong = long
 
