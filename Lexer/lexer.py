@@ -3,14 +3,14 @@ from globalTypes import *
 def globales(prog,pos,long):
     global programa
     global p
-    global l
+    global currentLine
     global progLong
     programa = prog
     # Avoid not reading last character adding an space before the EOF.
     programa = programa.replace('$', ' $')
     p = pos
     progLong = long
-    l = 1
+    currentLine = 1
 
 def getToken(imprime = True):
 
@@ -22,7 +22,7 @@ def getToken(imprime = True):
     archivo = programa
     longitud = progLong
     global p
-    global l
+    global currentLine
     state = 0
     token = ''
     
@@ -35,10 +35,14 @@ def getToken(imprime = True):
 
     #Traverse the array till an EOF is encountered.
     while c != '$':
+
         #Save the current char.
         c = archivo[p]
 
         t = ''
+
+        if(c == "\n"):
+            currentLine = currentLine + 1
 
         #If an EOL is encountered, go to the final state of COMMENTS.
         if (c == "$"):
@@ -47,19 +51,23 @@ def getToken(imprime = True):
         # Add to the comments the EOL if needed.
         if(c == '\n' and state == 9):
             state = 9
-        if(c == '\n'):
-            l = l + 1
 
+        # Allow unknown symbols inside the comments.
         if(c not in mapa and state == 9):
             token += c
             state = 9
             p = p + 1
             c = archivo[p]
+        # Detect unknown symbols outside the comments.
         elif(c not in mapa and state != 9):
+            state = 34
             token += c
             p = p + 1
-            state = 32
-            c = archivo[p]        
+            c = archivo[p]
+            while(c not in mapa):
+                token += c
+                p = p + 1
+                c = archivo[p]
 
         state = M[state][mapa[c]]
 
@@ -265,10 +273,23 @@ def getToken(imprime = True):
         elif(state == 33): 
             # ERROR
             t = token
+
             printToken(t, TokenType.ERROR, imprime)
 
             # Detect if it was an unknown symbol.            
-            detectIntegerError(t, l)
+            detectIntegerError(t)
+
+            token = ''
+            state = 0
+            return TokenType.ERROR, t
+        elif(state == 35): 
+            # ERROR
+            t = token
+
+            # Detect if it was an unknown symbol.            
+            detectUnknownSymbolError(t)
+
+            printToken(t, TokenType.ERROR, imprime)
 
             token = ''
             state = 0
@@ -288,18 +309,41 @@ def printToken(t, tokenType, imprime):
     if imprime:
         print(t," = ",tokenType.name)
 
-def detectIntegerError(lookup, l):
+def detectIntegerError(lookup):
+    global currentLine
+
     lookup = lookup.replace('$', '').translate({ord(i): None for i in ' '})
     indicator = ""
-    
-    line = programa.split("\n")[l-1]
 
-    errorIndex = line.index(lookup)
+    line = programa.split("\n")[currentLine-1]
+
+    errorIndex = line.find(lookup) 
 
     indicator += (' '*errorIndex) + "^"
 
     print("\nTraceback (most recent call last):")
-    print ("Linea ", l ,": Error in the formation of an integer:")
+    print ("Line ", currentLine ,": Error in the formation of an integer:")
     print(line.replace('$', ''))
     print(indicator,"\n")
+
+    #currentLine = currentLine - 1
   
+  
+def detectUnknownSymbolError(lookup):
+    global currentLine
+
+    lookup = lookup.replace('$', '').translate({ord(i): None for i in ' '})
+    indicator = ""
+
+    line = programa.split("\n")[currentLine-1]
+
+    errorIndex = line.find(lookup) 
+
+    indicator += (' '*errorIndex) + "^"
+
+    print("\nTraceback (most recent call last):")
+    print ("Line ", currentLine ,": Unknown symbol error:")
+    print(line.replace('$', ''))
+    print(indicator,"\n")
+
+    currentLine = currentLine - 1
