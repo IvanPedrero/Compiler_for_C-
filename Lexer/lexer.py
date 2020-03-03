@@ -1,15 +1,16 @@
 from globalTypes import *
 
-
 def globales(prog,pos,long):
     global programa
     global p
+    global l
     global progLong
     programa = prog
     # Avoid not reading last character adding an space before the EOF.
     programa = programa.replace('$', ' $')
     p = pos
     progLong = long
+    l = 1
 
 def getToken(imprime = True):
 
@@ -21,8 +22,10 @@ def getToken(imprime = True):
     archivo = programa
     longitud = progLong
     global p
+    global l
     state = 0
     token = ''
+    
 
     #Save the simbols to a map.
     mapa ={}
@@ -44,9 +47,22 @@ def getToken(imprime = True):
         # Add to the comments the EOL if needed.
         if(c == '\n' and state == 9):
             state = 9
+        if(c == '\n'):
+            l = l + 1
+
+        if(c not in mapa and state == 9):
+            token += c
+            state = 9
+            p = p + 1
+            c = archivo[p]
+        elif(c not in mapa and state != 9):
+            token += c
+            p = p + 1
+            state = 32
+            c = archivo[p]        
 
         state = M[state][mapa[c]]
-             
+
         if(state == 2):
             # NUM      
             t = token
@@ -246,12 +262,13 @@ def getToken(imprime = True):
             p += 1
             c = archivo[p]
             return TokenType.CLOSE_CURLY_BRACKETS, t
-        elif(state == 33):
+        elif(state == 33): 
             # ERROR
             t = token
             printToken(t, TokenType.ERROR, imprime)
-            
-            detectIntegerError(t)
+
+            # Detect if it was an unknown symbol.            
+            detectIntegerError(t, l)
 
             token = ''
             state = 0
@@ -271,16 +288,18 @@ def printToken(t, tokenType, imprime):
     if imprime:
         print(t," = ",tokenType.name)
 
-def detectIntegerError(lookup):
+def detectIntegerError(lookup, l):
     lookup = lookup.replace('$', '').translate({ord(i): None for i in ' '})
-    i = 0
-    for line in programa.split("\n"):
-        i = i + 1
-        indicator = ""
-        if lookup in line:
-            errorIndex = line.index(lookup)
-            indicator += (' '*errorIndex) + "^"
-            print("\nTraceback (most recent call last):")
-            print ("Linea ", i ,": Error in the formation of an integer:")
-            print(line.replace('$', ''))
-            print(indicator)
+    indicator = ""
+    
+    line = programa.split("\n")[l-1]
+
+    errorIndex = line.index(lookup)
+
+    indicator += (' '*errorIndex) + "^"
+
+    print("\nTraceback (most recent call last):")
+    print ("Linea ", l ,": Error in the formation of an integer:")
+    print(line.replace('$', ''))
+    print(indicator,"\n")
+  
