@@ -2,30 +2,39 @@ from globalTypes import *
 
 def globales(prog,pos,long):
     global programa
-    global p
     global currentLine
     global progLong
-    programa = prog
+    global p
+    global currentLine
+
+    # Decode the latin characters and decode them in utf-8.
+    prog = prog.encode("latin-1").decode("utf-8")
     # Avoid not reading last character adding an space before the EOF.
-    programa = programa.replace('$', ' $')
+    prog = prog.replace('$', ' $')
+
+    # Assign the global values.
+    programa = prog
     p = pos
     progLong = long
+
+    # Set the line counter to 1.
     currentLine = 1
 
 def getToken(imprime = True):
 
+    # Open the matrix to make the calculations of the table.
     with open('matriz.txt') as f:
         fil,col=[int(x) for x in next(f).split()]
         simbolos = next(f).split('|')
         M = [[int(x) for x in line.split()] for line in f]
 
-    archivo = programa
-    longitud = progLong
     global p
     global currentLine
+    archivo = programa
+    longitud = progLong
     state = 0
     token = ''
-    
+
 
     #Save the simbols to a map.
     mapa ={}
@@ -41,8 +50,10 @@ def getToken(imprime = True):
 
         t = ''
 
-        if(c == "\n"):
+        if(c == "\n" and state != 32):
             currentLine = currentLine + 1
+        
+        lineToDebug = currentLine
 
         #If an EOL is encountered, go to the final state of COMMENTS.
         if (c == "$"):
@@ -235,7 +246,7 @@ def getToken(imprime = True):
             c = archivo[p]
             return TokenType.CLOSE_BRACKETS, t
         elif(state == 28):
-            # (
+            # [
             t = token
             printToken(c, TokenType.OPEN_SQUARE_BRACKETS, imprime)
             token = ''
@@ -244,7 +255,7 @@ def getToken(imprime = True):
             c = archivo[p]
             return TokenType.OPEN_SQUARE_BRACKETS, t
         elif(state == 29):
-            # )
+            # ]
             t = token
             printToken(c, TokenType.CLOSE_SQUARE_BRACKETS, imprime)
             token = ''
@@ -253,7 +264,7 @@ def getToken(imprime = True):
             c = archivo[p]
             return TokenType.CLOSE_SQUARE_BRACKETS, t
         elif(state == 30):
-            # (
+            # {
             t = token
             printToken(c, TokenType.OPEN_CURLY_BRACKETS, imprime)
             token = ''
@@ -262,7 +273,7 @@ def getToken(imprime = True):
             c = archivo[p]
             return TokenType.OPEN_CURLY_BRACKETS, t
         elif(state == 31):
-            # )
+            # }
             t = token
             printToken(c, TokenType.CLOSE_CURLY_BRACKETS, imprime)
             token = ''
@@ -312,7 +323,7 @@ def printToken(t, tokenType, imprime):
 def detectIntegerError(lookup):
     global currentLine
 
-    lookup = lookup.replace('$', '').translate({ord(i): None for i in ' '})
+    #lookup = lookup.replace('$', '').translate({ord(i): None for i in ' '})
     indicator = ""
 
     line = programa.split("\n")[currentLine-1]
@@ -331,8 +342,7 @@ def detectIntegerError(lookup):
   
 def detectUnknownSymbolError(lookup):
     global currentLine
-
-    lookup = lookup.replace('$', '').translate({ord(i): None for i in ' '})
+    #lookup = lookup.replace('$', '').translate({ord(i): None for i in ' '})
     indicator = ""
 
     line = programa.split("\n")[currentLine-1]
@@ -345,5 +355,4 @@ def detectUnknownSymbolError(lookup):
     print ("Line ", currentLine ,": Unknown symbol error:")
     print(line.replace('$', ''))
     print(indicator,"\n")
-
     currentLine = currentLine - 1
