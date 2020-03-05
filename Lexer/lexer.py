@@ -9,7 +9,7 @@ def globales(prog,pos,long):
 
     # Decode the latin characters and decode them in utf-8.
     prog = prog.encode("latin-1").decode("utf-8")
-    
+
     # Avoid not reading last character adding an space before the EOF.
     prog = prog.replace('$', ' $')
 
@@ -21,6 +21,11 @@ def globales(prog,pos,long):
     # Set the line counter to 1.
     currentLine = 1
 
+'''
+This function will return a token [TokenType, string]
+from the program file given in the 
+function globales().
+'''
 def getToken(imprime = True):
 
     # Open the matrix to make the calculations of the table.
@@ -29,13 +34,13 @@ def getToken(imprime = True):
         simbolos = next(f).split('|')
         M = [[int(x) for x in line.split()] for line in f]
 
+    # Define the local variables and the scope of the globals that the function will use.
     global p
     global currentLine
     archivo = programa
     longitud = progLong
     state = 0
     token = ''
-
 
     #Save the simbols to a map.
     mapa ={}
@@ -49,14 +54,13 @@ def getToken(imprime = True):
         #Save the current char.
         c = archivo[p]
 
+        # Temporal variable to return the values of the token after wiping the token.
         t = ''
 
         if(c == "\n" and state != 32):
             currentLine = currentLine + 1
         
-        lineToDebug = currentLine
-
-        #If an EOL is encountered, go to the final state of COMMENTS.
+        # If an EOL is encountered, go to the final state of COMMENTS.
         if (c == "$"):
             return TokenType.ENDFILE, "$"
         
@@ -81,6 +85,7 @@ def getToken(imprime = True):
                 p = p + 1
                 c = archivo[p]
 
+        # Only calculate the state if the character is valid.
         if c in mapa:
             state = M[state][mapa[c]]
 
@@ -287,6 +292,7 @@ def getToken(imprime = True):
             # ERROR
             t = token
 
+            # Print the error.
             printToken(t, TokenType.ERROR, imprime)
 
             # Detect if it was an unknown symbol.            
@@ -302,6 +308,7 @@ def getToken(imprime = True):
             # Detect if it was an unknown symbol.            
             detectUnknownSymbolError(t)
 
+            # Print the unknown error.
             printToken(t, TokenType.ERROR, imprime)
 
             token = ''
@@ -319,22 +326,35 @@ def getToken(imprime = True):
     else:
         return TokenType.ENDFILE, "$"
 
+'''
+This function will print the token and it's 
+value if the boolean flag is set to true.
+'''
 def printToken(t, tokenType, imprime):
     if imprime:
         print(t," = ",tokenType.name)
 
+'''
+This function will print the line where a given 
+error is found and the position in the line
+(Only for errors in the formation of integers 
+or variables).
+'''
 def detectIntegerError(lookup):
     global currentLine
 
-    #lookup = lookup.replace('$', '').translate({ord(i): None for i in ' '})
     indicator = ""
 
+    # Get the current line as a string.
     line = programa.split("\n")[currentLine-1]
 
+    # Get the index where the error is in the line.
     errorIndex = line.find(lookup) 
 
+    # Set the indicator of the error.
     indicator += (' '*errorIndex) + "^"
 
+    # Print the error.
     print("\nTraceback (most recent call last):")
     print ("Line ", currentLine ,": Error in the formation of an integer:")
     print(line.replace('$', ''))
@@ -342,13 +362,16 @@ def detectIntegerError(lookup):
 
     #currentLine = currentLine - 1
   
-  
+'''
+This function will print the line where a given 
+error is found and the position in the line
+(Only for errors where an unknown character
+[or string] was found).
+'''
 def detectUnknownSymbolError(lookup):
     global currentLine
     
     lineNumbers = len(programa.split("\n"))
-
-    #lookup = lookup.replace('$', '').translate({ord(i): None for i in ' '})
 
     indicator = ""
 
@@ -356,16 +379,20 @@ def detectUnknownSymbolError(lookup):
     if currentLine > lineNumbers:
         return
 
+    # Get the current line as a string.
     line = programa.split("\n")[currentLine-1]
 
     # Avoid looking for the error if not in line
     if lookup not in line:
         return
 
+    # Get the index where the error is in the line.
     errorIndex = line.find(lookup) 
 
+    # Set the indicator of the error.
     indicator += (' '*errorIndex) + "^"
 
+    # Print the error.
     print("\nTraceback (most recent call last):")
     print ("Line ", currentLine ,": Unknown symbol error:")
     print(line.replace('$', ''))

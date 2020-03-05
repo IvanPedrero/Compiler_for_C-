@@ -1,5 +1,6 @@
 from enum import Enum
 
+# Token class.
 class TokenType(Enum):
 	NUM = 0	
 	ID = 1
@@ -33,8 +34,14 @@ class TokenType(Enum):
 	ENDFILE = 29
 	ERROR = 30
 	
+# Reserved word array.
 reserved_keywords = ["else","if","int","return","void","while"]
 
+'''
+This function will return a reserved word token
+given a string. If the string does not match with 
+any reserved word, it will return the token ERROR.
+'''
 def getReservedKeyWord(keyword):
 	if keyword not in reserved_keywords:
 		return TokenType.ERROR
