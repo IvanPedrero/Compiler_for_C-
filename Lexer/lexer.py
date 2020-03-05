@@ -9,6 +9,7 @@ def globales(prog,pos,long):
 
     # Decode the latin characters and decode them in utf-8.
     prog = prog.encode("latin-1").decode("utf-8")
+    
     # Avoid not reading last character adding an space before the EOF.
     prog = prog.replace('$', ' $')
 
@@ -80,7 +81,8 @@ def getToken(imprime = True):
                 p = p + 1
                 c = archivo[p]
 
-        state = M[state][mapa[c]]
+        if c in mapa:
+            state = M[state][mapa[c]]
 
         if(state == 2):
             # NUM      
@@ -304,6 +306,7 @@ def getToken(imprime = True):
 
             token = ''
             state = 0
+
             return TokenType.ERROR, t
         elif state != 0:
             #Get all the char and save them to the tokens.
@@ -342,10 +345,22 @@ def detectIntegerError(lookup):
   
 def detectUnknownSymbolError(lookup):
     global currentLine
+    
+    lineNumbers = len(programa.split("\n"))
+
     #lookup = lookup.replace('$', '').translate({ord(i): None for i in ' '})
+
     indicator = ""
 
+    # Avoid length errors.
+    if currentLine > lineNumbers:
+        return
+
     line = programa.split("\n")[currentLine-1]
+
+    # Avoid looking for the error if not in line
+    if lookup not in line:
+        return
 
     errorIndex = line.find(lookup) 
 
@@ -355,4 +370,5 @@ def detectUnknownSymbolError(lookup):
     print ("Line ", currentLine ,": Unknown symbol error:")
     print(line.replace('$', ''))
     print(indicator,"\n")
+
     currentLine = currentLine - 1
