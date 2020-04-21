@@ -27,8 +27,9 @@ def match(expected):
         token, tokenString, lineno = getToken(imprimeScanner)
         #print("TOKEN:", token, lineno)
     else:
-        syntaxError("unexpected token -> ")
+        syntaxError("unexpected token at matching -> ")
         printToken(token,tokenString, imprimeScanner)
+        print("Expected : ", expected)
         print("      ")
 
 def matchType():
@@ -59,10 +60,19 @@ def declaration_list():
     t = None
     p = None
 
+    if token == TokenType.COMMENT:
+        match(TokenType.COMMENT)
+
     t = declaration()
     p = t
     
     while token != TokenType.ENDFILE:
+
+        if token == TokenType.COMMENT:
+            match(TokenType.COMMENT)
+
+        q = None
+
         q = declaration()
 
         if q != None and p != None:
@@ -131,7 +141,7 @@ def declaration():
             t.child[1] = compound_statement()
     
     else:
-        syntaxError("unexpected token -> ")
+        syntaxError("unexpected token in declaration -> ")
         printToken(token,tokenString, imprimeScanner)
         token, tokenString, lineno = getToken()
 
@@ -162,7 +172,7 @@ def var_declaration():
 
     # Array declaration.
     elif token == TokenType.OPEN_SQUARE_BRACKETS:
-        t = newDecNode(DecKind.ScalarDecK)
+        t = newDecNode(DecKind.ArrayDecK)
 
         if  t != None:
             t.variableDataType = decType
@@ -178,7 +188,7 @@ def var_declaration():
         match(TokenType.SEMICOLON)
     
     else:
-        syntaxError("unexpected token -> ")
+        syntaxError("unexpected token at var declaration -> ")
         printToken(token,tokenString, imprimeScanner)
         token, tokenString, lineno = getToken()
 
@@ -202,6 +212,7 @@ def param():
         match(TokenType.CLOSE_SQUARE_BRACKETS)
 
         t = newDecNode(DecKind.ArrayDecK)
+
     else:
         t = newDecNode(DecKind.ScalarDecK)
     
@@ -229,9 +240,11 @@ def param_list():
     t = param()
     ptr = t
 
-    while t != None and token == TokenType.COMMA:
+    while (token == TokenType.COMMA):
+        
         match(TokenType.COMMA)
         newNode = param()
+
         if(newNode != None):
             ptr.sibling = newNode
             ptr = newNode
@@ -245,15 +258,21 @@ def compound_statement():
 
     match(TokenType.OPEN_CURLY_BRACKETS)
 
-    if token != TokenType.CLOSE_CURLY_BRACKETS:
+    
 
+    if (token != TokenType.CLOSE_CURLY_BRACKETS):
+        
         t = newStmtNode(StmtKind.CompoundK)
+
+        if(t == None):
+            return None
 
         if is_a_type(token):
             t.child[0] = local_declarations()
 
         if token != TokenType.CLOSE_CURLY_BRACKETS:
             t.child[1] = statement_list()
+
     
     match(TokenType.CLOSE_CURLY_BRACKETS)
 
@@ -323,32 +342,13 @@ def statement():
     elif token == TokenType.OPEN_CURLY_BRACKETS:
         t = compound_statement()
 
-    elif token ==TokenType.NUM:
+    elif token == TokenType.NUM or token == TokenType.ID\
+        or token == TokenType.SEMICOLON or token == TokenType.OPEN_CURLY_BRACKETS:
+        
         t = expression_statement()
-
-    elif token == TokenType.ID:
-        match(TokenType.ID)
-
-    elif token == TokenType.SEMICOLON:
-        match(TokenType.SEMICOLON)
-
-    elif token == TokenType.OPEN_BRACKETS:
-        match(TokenType.OPEN_BRACKETS)
-
-    elif token == TokenType.OPEN_SQUARE_BRACKETS:
-        match(TokenType.OPEN_SQUARE_BRACKETS)
-
-    elif token == TokenType.CLOSE_SQUARE_BRACKETS:
-        match(TokenType.CLOSE_SQUARE_BRACKETS)
-
-    elif token == TokenType.EQUAL:
-        match(TokenType.EQUAL)
-
-    elif token == TokenType.PLUS or token == TokenType.MINUS or token == TokenType.MULT or token == TokenType.DIVISION:
-        match(token)
-
+        
     else:
-        syntaxError("unexpected token -> ")
+        syntaxError("unexpected token at statement -> ")
         printToken(token,tokenString, imprimeScanner)
         token, tokenString, lineno = getToken()
     
@@ -451,7 +451,7 @@ def expression():
     
     if gotLvalue == True and token == TokenType.EQUAL:
 
-        if lvalue != None and lvalue.nodekind == NodeKind.ExpK and lvalue.kind.exp == ExpKind.IdK:
+        if lvalue != None and lvalue.nodekind == NodeKind.ExpK and lvalue.exp == ExpKind.IdK:
 
             match(TokenType.EQUAL)
 
@@ -464,11 +464,12 @@ def expression():
                 t.child[1] = rvalue
         
         else:
-            syntaxError("unexpected token -> ")
+            syntaxError("unexpected token at expression -> ")
             printToken(token,tokenString, imprimeScanner)
             token, tokenString, lineno = getToken()
     
     else:
+        
         t = simple_expression(lvalue)
     
     return t
@@ -483,12 +484,15 @@ def simple_expression(passdown):
 
     lExpr = additive_expression(passdown)
 
-    if token == TokenType.LESS_EQUAL or token == TokenType.GREATER_EQUAL or token == TokenType.GREATER or token == TokenType.LESS or token == TokenType.EQUALS_TO or token == TokenType.DIFFERENT:
+    if token == TokenType.LESS_EQUAL or token == TokenType.GREATER_EQUAL or token == TokenType.GREATER \
+        or token == TokenType.LESS or token == TokenType.EQUALS_TO or token == TokenType.DIFFERENT:
+
         operator = token
         match(token)
         rExpr = additive_expression(None)
 
         t = newExpNode(ExpKind.OpK)
+
         if(t != None):
             t.child[0] = lExpr
             t.child[1] = rExpr
@@ -570,7 +574,7 @@ def factor(passdown):
         match(TokenType.NUM)
     
     else:
-        syntaxError("unexpected token -> ")
+        syntaxError("unexpected token at factor -> ")
         printToken(token,tokenString, imprimeScanner)
         token, tokenString, lineno = getToken()
     
@@ -606,6 +610,7 @@ def ident_statement():
     else:
     
         if token == TokenType.OPEN_SQUARE_BRACKETS:
+
             match(TokenType.OPEN_SQUARE_BRACKETS)
             expr = expression(); 
             match(TokenType.CLOSE_SQUARE_BRACKETS)
@@ -636,6 +641,7 @@ def args_list():
     newNode = None
 
     t = expression()
+
     ptr = t
 
     while token == TokenType.COMMA:
@@ -690,7 +696,9 @@ def newExpNode(kind):
         t.nodekind = NodeKind.ExpK
         t.exp = kind
         t.lineno = lineno
-        t.type = ExpType.Void
+        if(kind == ExpKind.AssignK):
+            t.val = TokenType.EQUAL
+        #t.type = ExpType.Void
     return t
 
 
@@ -743,15 +751,16 @@ def printTree(tree):
                 print(tree.lineno, "Operator :", tree.op)
             
             elif tree.exp == ExpKind.IdK:
-                print(tree.lineno, "Identifier :", tree.name)
-                if tree.val != 0:
-                    print(tree.lineno, "[", tree.val, "]")
+                if tree.name != None:
+                    print(tree.lineno, "Identifier :", tree.name)
+                else:
+                    print(tree.lineno, "Assignment :", tree.val)
             
             elif tree.exp == ExpKind.ConstK:
                 print(tree.lineno, "Literal constant :", tree.val)
             
             elif tree.exp == ExpKind.AssignK:
-                print(tree.lineno, "Literal constant :", tree.val)
+                print(tree.lineno, "Assignment :", tree.val)
             
             else:
                 print(tree.lineno, "<<<unknown expression type>>>")
