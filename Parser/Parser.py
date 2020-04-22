@@ -6,7 +6,7 @@ tokenString = None # holds the token string value
 Error = False
 #lineno = 1
 SintaxTree = None
-imprimeScanner = True
+imprimeScanner = False
 
 def globales(prog,pos,long):
     global programa
@@ -39,14 +39,14 @@ def matchType():
 
     if token == TokenType.INT:
         tokenType = TokenType.INT
-        token, tokenString, lineno = getToken()
+        token, tokenString, lineno = getToken(imprimeScanner)
     elif token == TokenType.VOID:
         tokenType = TokenType.VOID
-        token, tokenString, lineno = getToken()
+        token, tokenString, lineno = getToken(imprimeScanner)
     else:
         syntaxError("expected a type identifier but got a -> ")
         printToken(token,tokenString, imprimeScanner)
-        token, tokenString, lineno = getToken()
+        token, tokenString, lineno = getToken(imprimeScanner)
 
     return tokenType
 
@@ -143,7 +143,7 @@ def declaration():
     else:
         syntaxError("unexpected token in declaration -> ")
         printToken(token,tokenString, imprimeScanner)
-        token, tokenString, lineno = getToken()
+        token, tokenString, lineno = getToken(imprimeScanner)
 
     return t
 
@@ -190,7 +190,7 @@ def var_declaration():
     else:
         syntaxError("unexpected token at var declaration -> ")
         printToken(token,tokenString, imprimeScanner)
-        token, tokenString, lineno = getToken()
+        token, tokenString, lineno = getToken(imprimeScanner)
 
     return t
 
@@ -350,7 +350,7 @@ def statement():
     else:
         syntaxError("unexpected token at statement -> ")
         printToken(token,tokenString, imprimeScanner)
-        token, tokenString, lineno = getToken()
+        token, tokenString, lineno = getToken(imprimeScanner)
     
     return t
 
@@ -466,7 +466,7 @@ def expression():
         else:
             syntaxError("unexpected token at expression -> ")
             printToken(token,tokenString, imprimeScanner)
-            token, tokenString, lineno = getToken()
+            token, tokenString, lineno = getToken(imprimeScanner)
     
     else:
         
@@ -576,7 +576,7 @@ def factor(passdown):
     else:
         syntaxError("unexpected token at factor -> ")
         printToken(token,tokenString, imprimeScanner)
-        token, tokenString, lineno = getToken()
+        token, tokenString, lineno = getToken(imprimeScanner)
     
     return t
 
