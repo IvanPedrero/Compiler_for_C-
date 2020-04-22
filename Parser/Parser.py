@@ -1,36 +1,75 @@
 from globalTypes import *
 from lexer import *
 
-token = None # holds current token
-tokenString = None # holds the token string value 
+programa = None
+posicion = None
+progLong = None
+lineno = 0
+
+token = None
+tokenString = None
+
 Error = False
-#lineno = 1
 SintaxTree = None
+
 imprimeScanner = False
 
-def globales(prog,pos,long):
+
+def globales(prog, pos, long):
     global programa
     global posicion
     global progLong
-    programa=prog
-    posicion=pos
-    progLong=long
+    programa = prog
+    posicion = pos
+    progLong = long
+
 
 def syntaxError(message):
     global Error
-    print(">>> Syntax error at line " + str(lineno) + ": " + message, end='')
-    Error = True
+
+    if Error != True:
+        #print("\n>>> Syntax error at line " + str(lineno) + ": " + message)
+        Error = True
+        detectError(tokenString, message)
+
+    match(token)
+
+
+def detectError(lookup, message):
+    global lineno
+
+    indicator = ""
+
+    # Get the current line as a string.
+    line = programa.split("\n")[lineno-1]
+
+    # Get the index where the error is in the line.
+    errorIndex = line.find(lookup) 
+
+    # Set the indicator of the error.
+    indicator += (' '*errorIndex) + "^"
+
+    # Print the error.
+    print("\nTraceback (most recent call last):")
+    print ("Line ", lineno ,": ", message)
+    print(line.replace('$', ''))
+    print(indicator,"\n")
+
+
 
 def match(expected):
     global token, tokenString, lineno, imprimeScanner
     if (token == expected):
         token, tokenString, lineno = getToken(imprimeScanner)
-        #print("TOKEN:", token, lineno)
     else:
+        '''
         syntaxError("unexpected token at matching -> ")
         printToken(token,tokenString, imprimeScanner)
         print("Expected : ", expected)
         print("      ")
+        '''
+        syntaxError("Unexpected token at matching")
+
 
 def matchType():
     global token, tokenString, lineno, imprimeScanner
@@ -44,17 +83,19 @@ def matchType():
         tokenType = TokenType.VOID
         token, tokenString, lineno = getToken(imprimeScanner)
     else:
-        syntaxError("expected a type identifier but got a -> ")
-        printToken(token,tokenString, imprimeScanner)
-        token, tokenString, lineno = getToken(imprimeScanner)
+        syntaxError("Expected a type identifier")
+        '''printToken(token,tokenString, imprimeScanner)
+        token, tokenString, lineno = getToken(imprimeScanner)'''
 
     return tokenType
+
 
 def is_a_type(tok):
     if tok == TokenType.INT or tok == TokenType.VOID:
         return True
     else:   
         return False
+
 
 def declaration_list():
     t = None
@@ -141,9 +182,9 @@ def declaration():
             t.child[1] = compound_statement()
     
     else:
-        syntaxError("unexpected token in declaration -> ")
-        printToken(token,tokenString, imprimeScanner)
-        token, tokenString, lineno = getToken(imprimeScanner)
+        syntaxError("Unexpected token")
+        '''printToken(token,tokenString, imprimeScanner)
+        token, tokenString, lineno = getToken(imprimeScanner)'''
 
     return t
 
@@ -188,11 +229,12 @@ def var_declaration():
         match(TokenType.SEMICOLON)
     
     else:
-        syntaxError("unexpected token at var declaration -> ")
-        printToken(token,tokenString, imprimeScanner)
-        token, tokenString, lineno = getToken(imprimeScanner)
+        syntaxError("Unexpected token")
+        '''printToken(token,tokenString, imprimeScanner)
+        token, tokenString, lineno = getToken(imprimeScanner)'''
 
     return t
+
 
 def param():
     global token, tokenString, lineno, imprimeScanner
@@ -224,7 +266,6 @@ def param():
 
     return t
 
-    
 
 def param_list():
     global token, tokenString, lineno, imprimeScanner
@@ -348,9 +389,9 @@ def statement():
         t = expression_statement()
         
     else:
-        syntaxError("unexpected token at statement -> ")
-        printToken(token,tokenString, imprimeScanner)
-        token, tokenString, lineno = getToken(imprimeScanner)
+        syntaxError("Unexpected token")
+        '''printToken(token,tokenString, imprimeScanner)
+        token, tokenString, lineno = getToken(imprimeScanner)'''
     
     return t
 
@@ -464,9 +505,9 @@ def expression():
                 t.child[1] = rvalue
         
         else:
-            syntaxError("unexpected token at expression -> ")
-            printToken(token,tokenString, imprimeScanner)
-            token, tokenString, lineno = getToken(imprimeScanner)
+            syntaxError("Unexpected token")
+        '''printToken(token,tokenString, imprimeScanner)
+        token, tokenString, lineno = getToken(imprimeScanner)'''
     
     else:
         
@@ -525,7 +566,6 @@ def additive_expression(passdown):
     return t
 
 
-
 def term(passdown):
 
     t = None
@@ -574,9 +614,9 @@ def factor(passdown):
         match(TokenType.NUM)
     
     else:
-        syntaxError("unexpected token at factor -> ")
-        printToken(token,tokenString, imprimeScanner)
-        token, tokenString, lineno = getToken(imprimeScanner)
+        syntaxError("Unexpected token")
+        '''printToken(token,tokenString, imprimeScanner)
+        token, tokenString, lineno = getToken(imprimeScanner)'''
     
     return t
 
@@ -605,8 +645,6 @@ def ident_statement():
         if t != None:
             t.child[0] = arguments
             t.name = identifier
-        
-    
     else:
     
         if token == TokenType.OPEN_SQUARE_BRACKETS:
@@ -661,8 +699,7 @@ def args_list():
 def printSpaces():
     print(" " * indentno, end = "")
 
-# Function newStmtNode creates a new statement
-# node for syntax tree construction
+
 def newStmtNode(kind):
     global lineno
 
@@ -671,16 +708,11 @@ def newStmtNode(kind):
     if t == None:
         print("Out of memory error at line " + lineno)
     else:
-        #for i in range(MAXCHILDREN):
-        #    t.child[i] = None
-        #t.sibling = None
         t.nodekind = NodeKind.StmtK
         t.stmt = kind
         t.lineno = lineno
     return t
 
-# Function newExpNode creates a new expression 
-# node for syntax tree construction
 
 def newExpNode(kind):
     global lineno
@@ -690,15 +722,11 @@ def newExpNode(kind):
     if t == None:
         print("Out of memory error at line " + lineno)
     else:
-        #for i in range(MAXCHILDREN):
-        #    t.child[i] = None
-        #t.sibling = None
         t.nodekind = NodeKind.ExpK
         t.exp = kind
         t.lineno = lineno
         if(kind == ExpKind.AssignK):
             t.val = TokenType.EQUAL
-        #t.type = ExpType.Void
     return t
 
 
@@ -716,16 +744,11 @@ def newDecNode(kind):
 
     return t
 
-# Variable indentno is used by printTree to
-# store current number of spaces to indent
+
 indentno = 0
-
-# procedure printTree prints a syntax tree to the 
-# listing file using indentation to indicate subtrees
-
 def printTree(tree):
 
-    global indentno, imprime
+    global indentno
     indentno+=2 # INDENT
 
     while (tree != None):
@@ -795,10 +818,6 @@ def printTree(tree):
     indentno-=2 # UNINDENT
 
 
-# the primary function of the parser
-# Function parse returns the newly 
-# constructed syntax tree
-
 def parse(imprime = True):
     global token, tokenString, lineno
 
@@ -806,13 +825,20 @@ def parse(imprime = True):
 
     token, tokenString, lineno = getToken(imprimeScanner)
     t = declaration_list()
+
+    status = "Finished"
+
     if (token != TokenType.ENDFILE):
         syntaxError("Code ends before file\n")
     if imprime:
         printTree(t)
+
+        if Error:
+            status = status + " with errors"
+
+        print("\n- AST construction status : "+ status +" -")
     return t, Error
 
-def recibeParser(prog, pos, long): # Recibe los globales del main
-    recibeScanner(prog, pos, long) # Para mandar los globales
 
-#syntaxTree = parse()
+def recibeParser(prog, pos, long):
+    recibeScanner(prog, pos, long)
