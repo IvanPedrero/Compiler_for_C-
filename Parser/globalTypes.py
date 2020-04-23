@@ -88,7 +88,6 @@ class DecKind(Enum):
     ArrayDecK = 1
     FuncDecK = 2
 
-# ExpType is used for type checking
 class ExpType(Enum):
     Void = 0
     Integer = 1
@@ -96,12 +95,11 @@ class ExpType(Enum):
     Array = 3
     Function = 4
 
-# Máximo número de hijos por nodo (3 para el if)
 MAXCHILDREN = 3
 
 class TreeNode:
     def __init__(self):
-        # MAXCHILDREN = 3 está en globalTypes
+        
         self.child = [None] * MAXCHILDREN # tipo treeNode
         self.sibling = None               # tipo treeNode
         self.lineno = 0                   # tipo int

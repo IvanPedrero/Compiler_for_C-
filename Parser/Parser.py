@@ -695,13 +695,15 @@ def args_list():
     return t
 
 
-# printSpaces indents by printing spaces */
 def printSpaces():
     print(" " * indentno, end = "")
 
 
 def newStmtNode(kind):
     global lineno
+
+    if Error:
+        return None
 
     t = TreeNode()
 
@@ -716,6 +718,9 @@ def newStmtNode(kind):
 
 def newExpNode(kind):
     global lineno
+
+    if Error:
+        return None
 
     t = TreeNode()
 
@@ -733,6 +738,9 @@ def newExpNode(kind):
 def newDecNode(kind):
     global lineno
 
+    if Error:
+        return None
+
     t = TreeNode()
 
     if t == None:
@@ -746,74 +754,74 @@ def newDecNode(kind):
 
 
 indentno = 0
-def printTree(tree):
+def printTree(t):
 
     global indentno
     indentno+=2 # INDENT
 
-    while (tree != None):
+    while (t != None):
         printSpaces()
 
-        if tree.nodekind == NodeKind.DecK:
+        if t.nodekind == NodeKind.DecK:
             
-            if tree.dec == DecKind.ScalarDecK:
-                print(tree.lineno, "Scalar declaration: ", tree.name, " of type: ", tree.variableDataType.name)
+            if t.dec == DecKind.ScalarDecK:
+                print(t.lineno, "Scalar declaration: ", t.name, " of type: ", t.variableDataType.name)
 
-            elif tree.dec == DecKind.ArrayDecK:
-                print(tree.lineno, "Array declaration: ", tree.name)
+            elif t.dec == DecKind.ArrayDecK:
+                print(t.lineno, "Array declaration: ", t.name)
             
-            elif tree.dec == DecKind.FuncDecK:
-                print(tree.lineno, "Function declaration: ", tree.name)
+            elif t.dec == DecKind.FuncDecK:
+                print(t.lineno, "Function declaration: ", t.name)
             
             else:
-                print(tree.lineno, "<<<unknown declaration type>>>")
+                print(t.lineno, "<<<Unknown declaration type>>>")
         
-        elif tree.nodekind == NodeKind.ExpK:
+        elif t.nodekind == NodeKind.ExpK:
 
-            if tree.exp == ExpKind.OpK:
-                print(tree.lineno, "Operator :", tree.op)
+            if t.exp == ExpKind.OpK:
+                print(t.lineno, "Operator :", t.op)
             
-            elif tree.exp == ExpKind.IdK:
-                if tree.name != None:
-                    print(tree.lineno, "Identifier :", tree.name)
+            elif t.exp == ExpKind.IdK:
+                if t.name != None:
+                    print(t.lineno, "Identifier :", t.name)
                 else:
-                    print(tree.lineno, "Assignment :", tree.val)
+                    print(t.lineno, "Assignment :", t.val)
             
-            elif tree.exp == ExpKind.ConstK:
-                print(tree.lineno, "Literal constant :", tree.val)
+            elif t.exp == ExpKind.ConstK:
+                print(t.lineno, "Literal constant :", t.val)
             
-            elif tree.exp == ExpKind.AssignK:
-                print(tree.lineno, "Assignment :", tree.val)
+            elif t.exp == ExpKind.AssignK:
+                print(t.lineno, "Assignment :", t.val)
             
             else:
-                print(tree.lineno, "<<<unknown expression type>>>")
+                print(t.lineno, "<<<Unknown expression type>>>")
             
-        elif tree.nodekind == NodeKind.StmtK:
+        elif t.nodekind == NodeKind.StmtK:
 
-            if tree.stmt == StmtKind.CompoundK:
-                print(tree.lineno, "Compound Statement")
+            if t.stmt == StmtKind.CompoundK:
+                print(t.lineno, "Compound Statement")
             
-            elif tree.stmt == StmtKind.IfK:
-                print(tree.lineno, "If Statement")
+            elif t.stmt == StmtKind.IfK:
+                print(t.lineno, "If Statement")
             
-            elif tree.stmt == StmtKind.WhileK:
-                print(tree.lineno, "While Statement")
+            elif t.stmt == StmtKind.WhileK:
+                print(t.lineno, "While Statement")
             
-            elif tree.stmt == StmtKind.ReturnK:
-                print(tree.lineno, "Return Statement")
+            elif t.stmt == StmtKind.ReturnK:
+                print(t.lineno, "Return Statement")
             
-            elif tree.stmt == StmtKind.CallK:
-                print(tree.lineno, "Call to Function Statement")
+            elif t.stmt == StmtKind.CallK:
+                print(t.lineno, "Call to Function Statement")
             
             else:
-                print(tree.lineno, "<<<unknown statement type>>>")
+                print(t.lineno, "<<<Unknown statement type>>>")
         
         else:
-            print(tree.lineno, "<<<unknown node type>>>")
+            print(t.lineno, "<<<Unknown node type>>>")
         
         for i in range(MAXCHILDREN):
-            printTree(tree.child[i])
-        tree = tree.sibling
+            printTree(t.child[i])
+        t = t.sibling
     
     indentno-=2 # UNINDENT
 
@@ -826,19 +834,18 @@ def parse(imprime = True):
     token, tokenString, lineno = getToken(imprimeScanner)
     t = declaration_list()
 
-    status = "Finished"
+    status = ""
 
     if (token != TokenType.ENDFILE):
         syntaxError("Code ends before file\n")
-    if imprime:
+
+    if imprime and not Error:
         printTree(t)
+        status = "Finished"
+    else:
+        status = "Cancelled"         
 
-        if Error:
-            status = status + " with errors"
-
-        print("\n- AST construction status : "+ status +" -")
+    print("\n- AST construction status : "+ status +" -")
+        
     return t, Error
 
-
-def recibeParser(prog, pos, long):
-    recibeScanner(prog, pos, long)
