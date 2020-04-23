@@ -481,9 +481,13 @@ def iteration_statement():
     """
     iteration-stmt -> while ( expression ) statement
     """
+
+    global lineno
     t = None
     expr = None
     stmt = None
+
+    tempLineno = lineno
 
     match(TokenType.WHILE)
     match(TokenType.OPEN_BRACKETS)
@@ -492,6 +496,7 @@ def iteration_statement():
     stmt = statement()
 
     t = newStmtNode(StmtKind.WhileK)
+    t.lineno = tempLineno
 
     if t != None:
         t.child[0] = expr
