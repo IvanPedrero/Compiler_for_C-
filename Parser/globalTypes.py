@@ -63,8 +63,9 @@ def getReservedKeyWord(keyword):
 
 
 
-#***********   Syntax tree for parsing ************
-
+'''
+Node type enumerators definition.
+'''
 class NodeKind(Enum):
     StmtK = 0
     ExpK = 1
@@ -97,31 +98,25 @@ class ExpType(Enum):
 
 MAXCHILDREN = 3
 
+'''
+Tree class definition.
+'''
 class TreeNode:
     def __init__(self):
         
-        self.child = [None] * MAXCHILDREN # tipo treeNode
-        self.sibling = None               # tipo treeNode
-        self.lineno = 0                   # tipo int
-        self.nodekind = None              # tipo NodeKind, en globalTypes
-        # en realidad los dos siguientes deberían ser uno solo (kind)
-        # siendo la  union { StmtKind stmt; ExpKind exp;, DecKind dec}
-        self.stmt = None                  # tipo StmtKind
-        self.exp = None                   # tipo ExpKind
-        self.dec = None					# tipo DecKind
-        # en realidad los tres siguientes deberían ser uno solo (attr)
-        # siendo la  union { TokenType op; int val; char * name;}
-        self.op = None                    # tipo TokenType
-        self.val = None                   # tipo int
-        self.name = None                  # tipo String
-        # for type checking of exps
-        self.type = None                  # de tipo ExpType
-		# Function return type
+        self.child = [None] * MAXCHILDREN
+        self.sibling = None
+        self.lineno = 0
+        self.nodekind = None
+        self.stmt = None
+        self.exp = None
+        self.dec = None
+        self.op = None
+        self.val = None
+        self.name = None
+        self.type = None
         self.functionReturnType = None
-		# Data type
         self.variableDataType = None
-		# Expression type
         self.expressionType = None
-		# Expression type
         self.isParameter = None
         self.isGlobal = None

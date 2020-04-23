@@ -910,6 +910,7 @@ def parse(imprime = True):
         syntaxError("Code ends before file\n")
 
     if imprime and not Error:
+        print("\n Abstract Syntax Tree : \n")
         printTree(t)
         status = "Finished"
     else:
