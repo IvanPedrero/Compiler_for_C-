@@ -32,9 +32,10 @@ def syntaxError(message):
 
     global Error
 
-    if Error != True:
-        Error = True
-        detectError(tokenString, message)
+    if token != TokenType.COMMENT:
+        if Error != True:
+            Error = True
+            detectError(tokenString, message)
 
     match(token)
 
@@ -67,6 +68,7 @@ def match(expected):
     """
 
     global token, tokenString, lineno, imprimeScanner
+    
     if (token == expected):
         token, tokenString, lineno = getToken(imprimeScanner)
     else:
@@ -314,13 +316,20 @@ def compound_statement():
     """
     compound-stmt -> “{“ local-declarations statement-list “}”
     """
-
+    
     t = None
 
     match(TokenType.OPEN_CURLY_BRACKETS)
 
+    if token == TokenType.COMMENT:
+        match(token)
+
     if (token != TokenType.CLOSE_CURLY_BRACKETS):
-        
+
+        if token == TokenType.COMMENT:              # Make sure to ignore the comments.
+            match(token)
+            return None
+
         t = newStmtNode(StmtKind.CompoundK)
 
         if(t == None):
