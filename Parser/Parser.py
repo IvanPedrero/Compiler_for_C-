@@ -496,7 +496,9 @@ def iteration_statement():
     stmt = statement()
 
     t = newStmtNode(StmtKind.WhileK)
-    t.lineno = tempLineno
+    
+    if t != None:
+        t.lineno = tempLineno
 
     if t != None:
         t.child[0] = expr
