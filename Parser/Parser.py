@@ -51,9 +51,6 @@ def detectError(lookup, message):
 
     line = programa.split("\n")[lineno-1]
 
-    if lookup == "":
-        lookup = tokenString
-
     errorIndex = line.find(lookup) 
 
     indicator += (' '*errorIndex) + "^"
