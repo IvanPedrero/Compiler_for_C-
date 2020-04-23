@@ -25,10 +25,14 @@ def globales(prog, pos, long):
 
 
 def syntaxError(message):
+    """ 
+    This function will be called if an error was encountered to
+    set a flag (Error) to abort the AST generation.
+    """
+
     global Error
 
     if Error != True:
-        #print("\n>>> Syntax error at line " + str(lineno) + ": " + message)
         Error = True
         detectError(tokenString, message)
 
@@ -36,42 +40,47 @@ def syntaxError(message):
 
 
 def detectError(lookup, message):
-    global lineno
+    """ 
+    This function will detect where an error was encountered and will display 
+    the line and the indicator symbol where the error is.
+    """
 
+    global lineno, tokenString
+    
     indicator = ""
 
-    # Get the current line as a string.
     line = programa.split("\n")[lineno-1]
 
-    # Get the index where the error is in the line.
+    if lookup == "":
+        lookup = tokenString
+
     errorIndex = line.find(lookup) 
 
-    # Set the indicator of the error.
     indicator += (' '*errorIndex) + "^"
 
-    # Print the error.
     print("\nTraceback (most recent call last):")
     print ("Line ", lineno ,": ", message)
     print(line.replace('$', ''))
     print(indicator,"\n")
 
 
-
 def match(expected):
+    """ 
+    This function will compare the current token with an exxpected sent one.
+    """
+
     global token, tokenString, lineno, imprimeScanner
     if (token == expected):
         token, tokenString, lineno = getToken(imprimeScanner)
     else:
-        '''
-        syntaxError("unexpected token at matching -> ")
-        printToken(token,tokenString, imprimeScanner)
-        print("Expected : ", expected)
-        print("      ")
-        '''
         syntaxError("Unexpected token at matching")
 
 
 def matchType():
+    """ 
+    This function will decide if the token is a valid identifier (int or void).
+    """
+
     global token, tokenString, lineno, imprimeScanner
 
     tokenType = TokenType.VOID
@@ -84,13 +93,15 @@ def matchType():
         token, tokenString, lineno = getToken(imprimeScanner)
     else:
         syntaxError("Expected a type identifier")
-        '''printToken(token,tokenString, imprimeScanner)
-        token, tokenString, lineno = getToken(imprimeScanner)'''
 
     return tokenType
 
 
 def is_a_type(tok):
+    """ 
+    This function will decide if the token is an identifier.
+    """
+
     if tok == TokenType.INT or tok == TokenType.VOID:
         return True
     else:   
@@ -98,6 +109,9 @@ def is_a_type(tok):
 
 
 def declaration_list():
+    """
+    declaration-list -> declaration { declaration }
+    """
     t = None
     p = None
 
@@ -124,8 +138,11 @@ def declaration_list():
 
 
 def declaration():
+    """
+    declaration -> var-declaration | fun-declaration
+    """
+
     global token, tokenString, lineno, imprimeScanner
-    #print("STATEMENT: ", token, lineno)
 
     t = None
     decType = None
@@ -135,9 +152,8 @@ def declaration():
 
     identifier = tokenString
     match(TokenType.ID)
-    
-    # Variable declaration.
-    if token == TokenType.SEMICOLON:
+
+    if token == TokenType.SEMICOLON:                # Variable declaration.
         t = newDecNode(DecKind.ScalarDecK)
 
         if  t != None:
@@ -146,8 +162,7 @@ def declaration():
 
         match(TokenType.SEMICOLON)
 
-    # Array declaration.
-    elif token == TokenType.OPEN_SQUARE_BRACKETS:
+    elif token == TokenType.OPEN_SQUARE_BRACKETS:   # Array declaration.
         t = newDecNode(DecKind.ArrayDecK)
 
         if  t != None:
@@ -163,8 +178,7 @@ def declaration():
         match(TokenType.CLOSE_SQUARE_BRACKETS)
         match(TokenType.SEMICOLON)
 
-    #Function declaration.
-    elif token == TokenType.OPEN_BRACKETS:
+    elif token == TokenType.OPEN_BRACKETS:          #Function declaration.
         t = newDecNode(DecKind.FuncDecK)
 
         if  t != None:
@@ -183,13 +197,15 @@ def declaration():
     
     else:
         syntaxError("Unexpected token")
-        '''printToken(token,tokenString, imprimeScanner)
-        token, tokenString, lineno = getToken(imprimeScanner)'''
 
     return t
 
 
 def var_declaration():
+    """
+    var-declaration -> type-specifier ID [ “[“ NUM “]” ]
+    """
+
     global token, tokenString, lineno, imprimeScanner
 
     t = None
@@ -201,8 +217,7 @@ def var_declaration():
     identifier = tokenString
     match(TokenType.ID)
 
-    # Variable declaration.
-    if token == TokenType.SEMICOLON:
+    if token == TokenType.SEMICOLON:                # Variable declaration.
         t = newDecNode(DecKind.ScalarDecK)
 
         if  t != None:
@@ -211,8 +226,7 @@ def var_declaration():
 
         match(TokenType.SEMICOLON)
 
-    # Array declaration.
-    elif token == TokenType.OPEN_SQUARE_BRACKETS:
+    elif token == TokenType.OPEN_SQUARE_BRACKETS:   # Array declaration.
         t = newDecNode(DecKind.ArrayDecK)
 
         if  t != None:
@@ -230,13 +244,15 @@ def var_declaration():
     
     else:
         syntaxError("Unexpected token")
-        '''printToken(token,tokenString, imprimeScanner)
-        token, tokenString, lineno = getToken(imprimeScanner)'''
 
     return t
 
 
 def param():
+    """
+    param -> type-specifier ID [ “[“ “]” ]
+    """
+
     global token, tokenString, lineno, imprimeScanner
 
     t = None
@@ -268,6 +284,10 @@ def param():
 
 
 def param_list():
+    """
+    param-list -> param { , param }
+    """
+
     global token, tokenString, lineno, imprimeScanner
 
     t = None
@@ -294,12 +314,13 @@ def param_list():
 
 
 def compound_statement():
+    """
+    compound-stmt -> “{“ local-declarations statement-list “}”
+    """
 
     t = None
 
     match(TokenType.OPEN_CURLY_BRACKETS)
-
-    
 
     if (token != TokenType.CLOSE_CURLY_BRACKETS):
         
@@ -314,13 +335,15 @@ def compound_statement():
         if token != TokenType.CLOSE_CURLY_BRACKETS:
             t.child[1] = statement_list()
 
-    
     match(TokenType.CLOSE_CURLY_BRACKETS)
 
     return t
 
 
 def local_declarations():
+    """
+    local-declarations -> [  var-declarations ]
+    """
     
     t = None
     ptr = None
@@ -345,6 +368,9 @@ def local_declarations():
 
 
 def statement_list():
+    """
+    statement-list -> [ statement-list  ]
+    """
     
     t = None
     ptr = None
@@ -367,6 +393,10 @@ def statement_list():
 
 
 def statement():
+    """
+    statement -> expression-stmt | compound-stmt | selection-stmt | iteration-stmt | return-stmt
+    """
+
     global token, tokenString, lineno, imprimeScanner
 
     t = None
@@ -390,27 +420,31 @@ def statement():
         
     else:
         syntaxError("Unexpected token")
-        '''printToken(token,tokenString, imprimeScanner)
-        token, tokenString, lineno = getToken(imprimeScanner)'''
     
     return t
 
 
 def expression_statement():
+    """
+    expression-stmt -> [ expression ] ;
+    """
 
-     t = None
+    t = None
 
-     if token == TokenType.SEMICOLON:
-         match(TokenType.SEMICOLON)
+    if token == TokenType.SEMICOLON:
+        match(TokenType.SEMICOLON)
 
-     elif token != TokenType.CLOSE_CURLY_BRACKETS:
-         t = expression()
-         match(TokenType.SEMICOLON) 
+    elif token != TokenType.CLOSE_CURLY_BRACKETS:
+        t = expression()
+        match(TokenType.SEMICOLON) 
 
-     return t
+    return t
     
 
 def selection_statement():
+    """
+    selection-stmt -> if ( expression ) statement [ else statement ]
+    """
 
     t = None
     expr = None
@@ -438,7 +472,9 @@ def selection_statement():
 
 
 def iteration_statement():
-
+    """
+    iteration-stmt -> while ( expression ) statement
+    """
     t = None
     expr = None
     stmt = None
@@ -459,6 +495,9 @@ def iteration_statement():
 
 
 def return_statement():
+    """
+    return-stmt  -> return [ expression ] ;
+    """
 
     t = None
     expr = None
@@ -479,6 +518,10 @@ def return_statement():
 
 
 def expression():
+    """
+    expression -> var = expression | simple-expression
+    """
+
     global token, tokenString, lineno, imprimeScanner
 
     t = None
@@ -505,18 +548,18 @@ def expression():
                 t.child[1] = rvalue
         
         else:
-            syntaxError("Unexpected token")
-        '''printToken(token,tokenString, imprimeScanner)
-        token, tokenString, lineno = getToken(imprimeScanner)'''
-    
+            syntaxError("Unexpected token") 
+
     else:
-        
         t = simple_expression(lvalue)
     
     return t
 
 
 def simple_expression(passdown):
+    """
+    simple-expression -> additive-expression [ relop additive expression ]
+    """
 
     t = None
     lExpr = None
@@ -546,6 +589,9 @@ def simple_expression(passdown):
 
 
 def additive_expression(passdown):
+    """
+    additive-expression -> [ additive-expression addop ] term
+    """
 
     t = None
     newNode = None
@@ -567,6 +613,9 @@ def additive_expression(passdown):
 
 
 def term(passdown):
+    """
+    term -> [ term mulop ] factor
+    """
 
     t = None
     newNode = None
@@ -588,6 +637,9 @@ def term(passdown):
 
 
 def factor(passdown):
+    """
+    factor -> ( expression ) | var | call | NUM
+    """
 
     global token, tokenString, lineno, imprimeScanner
 
@@ -615,8 +667,6 @@ def factor(passdown):
     
     else:
         syntaxError("Unexpected token")
-        '''printToken(token,tokenString, imprimeScanner)
-        token, tokenString, lineno = getToken(imprimeScanner)'''
     
     return t
 
@@ -673,6 +723,9 @@ def args():
 
 
 def args_list():
+    """
+    args -> [ arg-list ]
+    """
 
     t = None
     ptr = None
@@ -696,10 +749,18 @@ def args_list():
 
 
 def printSpaces():
+    """
+    This function will print the corresponding the spaces to the tree level.
+    """
+
     print(" " * indentno, end = "")
 
 
 def newStmtNode(kind):
+    """
+    This function will create a new statement node for the tree.
+    """
+
     global lineno
 
     if Error:
@@ -717,6 +778,10 @@ def newStmtNode(kind):
 
 
 def newExpNode(kind):
+    """
+    This function will create a new expression node for the tree.
+    """
+
     global lineno
 
     if Error:
@@ -732,10 +797,15 @@ def newExpNode(kind):
         t.lineno = lineno
         if(kind == ExpKind.AssignK):
             t.val = TokenType.EQUAL
+
     return t
 
 
 def newDecNode(kind):
+    """
+    This function will create a new declaration node for the tree.
+    """
+
     global lineno
 
     if Error:
