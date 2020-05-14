@@ -24,7 +24,7 @@ scope = 0
 # first time, otherwise ignored
 
 
-def st_insert(name, tipo, lineno, scope, newScope=-1):
+def st_insert(name, symbolType, lineno, scope, newScope=-1):
     global location
     try:
         int(name)
@@ -35,7 +35,7 @@ def st_insert(name, tipo, lineno, scope, newScope=-1):
                 BucketList[scope][name].append(lineno)
         else:
             location = location + 1
-            BucketList[scope][name] = [location, tipo, newScope, lineno]
+            BucketList[scope][name] = [location, symbolType, newScope, lineno]
 
 
 # Function st_lookup returns the memory
