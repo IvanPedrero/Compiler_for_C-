@@ -24,20 +24,20 @@ def buildSymtab(t):
 
         isNodeParent = True
 
-        if(t.nodekind == NodeKind.DecK):
+        if t.nodekind == NodeKind.DecK:
 
-            if(t.dec == DecKind.FuncDecK):
+            if t.dec == DecKind.FuncDecK:
 
-                if(stackArray[-1] != 0):
+                if stackArray[-1] != 0:
                     stackArray.pop()
 
                 currentChild = t.child[0]
 
                 numberOfParams = 0
 
-                while(currentChild != None and currentChild.stmt != StmtKind.CompoundK):
+                while currentChild != None and currentChild.stmt != StmtKind.CompoundK:
 
-                    numberOfParams += 1
+                    numberOfParams = numberOfParams + 1
 
                     currentChild = currentChild.sibling
 
@@ -59,7 +59,7 @@ def buildSymtab(t):
                     stackArray.append(scope)
                     BucketList[scope] = {}
 
-            elif(t.dec == DecKind.ScalarDecK):
+            elif t.dec == DecKind.ScalarDecK:
 
                 if t.variableDataType == TokenType.INT:
 
@@ -76,7 +76,7 @@ def buildSymtab(t):
 
                 isNodeParent = False
 
-            elif(t.dec == DecKind.ArrayDecK):
+            elif t.dec == DecKind.ArrayDecK:
 
                 if t.variableDataType == TokenType.INT:
 
@@ -89,21 +89,9 @@ def buildSymtab(t):
 
                 isNodeParent = False
 
-        elif(t.nodekind == NodeKind.ExpK):
+        elif t.nodekind == NodeKind.ExpK:
 
-            if(t.exp == ExpKind.IdK):
-
-                if t.name != None:
-
-                    st_insert(t.name, None, t.lineno,
-                              st_lookup(t.name))
-
-                    if BucketList[st_lookup(t.name)][t.name][0] == "":
-
-                        typeError(
-                            t, "Use of a variable not defined previously")
-
-            if(t.exp == ExpKind.AssignK):
+            if t.exp == ExpKind.AssignK:
 
                 if t.child[0] != None:
 
@@ -122,9 +110,29 @@ def buildSymtab(t):
 
                     isNodeParent = False
 
-        elif(t.nodekind == NodeKind.StmtK):
+            if t.exp == ExpKind.IdK:
 
-            if(t.stmt == StmtKind.IfK or t.stmt == StmtKind.WhileK):
+                if t.name != None:
+
+                    st_insert(t.name, None, t.lineno,
+                              st_lookup(t.name))
+
+                    if BucketList[st_lookup(t.name)][t.name][0] == None:
+
+                        typeError(
+                            t, "Use of a variable not defined previously")
+
+        elif t.nodekind == NodeKind.StmtK:
+
+            if t.stmt == StmtKind.IfK :
+
+                scope = scope + 1
+                newScope = newScope + 1
+
+                stackArray.append(scope)
+                BucketList[scope] = {}
+            
+            elif t.stmt == StmtKind.WhileK:
 
                 scope = scope + 1
                 newScope = newScope + 1
