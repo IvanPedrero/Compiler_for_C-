@@ -22,6 +22,8 @@ scope = 0
 # memory locations into the symbol table
 # loc = memory location is inserted only the
 # first time, otherwise ignored
+
+
 def st_insert(name, tipo, lineno, scope, newScope=-1):
     global location
     try:
@@ -45,7 +47,7 @@ def st_lookup(name):
     return stackArray[-1]
 
 
-# This function will check if a given variable 
+# This function will check if a given variable
 # in a given scope already defined.
 def checkIfInTable(name, actualScope):
     if name in BucketList[actualScope]:
@@ -53,8 +55,8 @@ def checkIfInTable(name, actualScope):
     return False
 
 
-# Procedure printSymTab prints a formatted 
-# listing of the symbol table contents 
+# Procedure printSymTab prints a formatted
+# listing of the symbol table contents
 # to the listing file
 def printSymTab():
     print("Variable Name    Location    Scope   Type")

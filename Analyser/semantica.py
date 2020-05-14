@@ -2,12 +2,19 @@ from globalTypes import *
 from Parser import *
 from symtab import *
 
+# Control variable that will
+# check if there was a
+# semantic error.
 Error = False
 
+# Temp tree for traversing
+# a node without changing the pointer
+# of the tree.
 originalTree = None
 
-programa = None
 
+# Function buildSymtab constructs the symbol
+# table by preorder traversal of the syntax tree
 def buildSymtab(t):
     global scope
 
@@ -138,12 +145,17 @@ def buildSymtab(t):
             stackArray.pop()
 
 
+# This function will set the error flag
+# that indicates there was a semantic
+# error.
 def typeError(t, message):
     global Error
     Error = True
     detectError(t, t.lineno, message)
 
 
+# Procedure that will print where
+# the error is within the program.
 def detectError(t, lineno, message):
 
     import Parser
@@ -156,24 +168,30 @@ def detectError(t, lineno, message):
 
     if t.name != None:
         lookup = t.name
-        errorIndex = line.find(lookup) 
+        errorIndex = line.find(lookup)
         indicator += (' '*errorIndex) + "^"
 
     else:
         lookup = line
-        errorIndex = line.find(lookup) 
+        errorIndex = line.find(lookup)
         indicator = ""
 
     print("\n\nTraceback (most recent call last):")
-    print ("Line ", lineno ,": ", message)
+    print("Line ", lineno, ": ", message)
     print(line.replace('$', ''))
-    print(indicator,"\n")
+    print(indicator, "\n")
 
 
+# Procedure typeCheck performs type checking
+# by a postorder syntax tree traversal
 def typeCheck(syntaxTree):
     traverse(syntaxTree, nullProc, checkNode)
 
 
+# Procedure traverse is a generic recursive
+# syntax tree traversal routine:
+# it applies preProc in preorder and postProc
+# in postorder to tree pointed to by t
 def traverse(t, preProc, postProc):
     if (t != None):
         preProc(t)
@@ -183,10 +201,13 @@ def traverse(t, preProc, postProc):
         traverse(t.sibling, preProc, postProc)
 
 
+# nullProc is a do-nothing procedure to generate preorder-only or
+# postorder-only traversals from traverse
 def nullProc(t):
     None
 
 
+# Procedure checkNode performs type checking at a single tree node
 def checkNode(t):
 
     errorMessage = ""
@@ -308,6 +329,9 @@ def checkNode(t):
             typeError(t, "Unknown expression type")
 
 
+# Procedure that will check the type of
+# a given function name within the
+# symbol table.
 def getFunctionReturnType(name):
     global originalTree
 
@@ -322,6 +346,10 @@ def getFunctionReturnType(name):
     originalTree = t
 
 
+# Driver function called from the main
+# file that runs the compiler. It will
+# call the functions that build the table
+# and performs the semantic analysis.
 def semantica(t, imprime=True):
     global programa
     global originalTree
@@ -331,7 +359,11 @@ def semantica(t, imprime=True):
 
     status = ""
 
+    print("\nBuilding symbol table...")
+
     buildSymtab(t)
+
+    print("\nPerforming type check...")
 
     typeCheck(t)
 
@@ -342,7 +374,6 @@ def semantica(t, imprime=True):
             print("\n Symbol Table : \n")
             printSymTab()
     else:
-        status = "Finished with errors"         
+        status = "Finished with errors"
 
-    print("\n- Symbol table construction status : "+ status +" -")
-            
+    print("\n- Semantic analysis status : " + status + " -")
