@@ -1,35 +1,61 @@
+from globalTypes import *
+
 # the hash table
-BucketList = {}
+BucketList = {
+    0: {
+        'main': [0, ExpType.Void, 0, 0],
+        'input': [0, ExpType.Integer, 0, 0],
+        'output': [1, ExpType.Void, 0, 0]
+    }
+}
+
+# Current location of a node
+location = 0
+
+# stack array
+stackArray = [0]
+
+# Scope being checked
+scope = 0
 
 # Procedure st_insert inserts line numbers and
 # memory locations into the symbol table
 # loc = memory location is inserted only the
 # first time, otherwise ignored
-def st_insert(name, lineno, loc):
-    if name in BucketList:
-        BucketList[name].append(lineno)
-    else:
-        BucketList[name] = [loc, lineno]
+def st_insert(name, tipo, lineno, scope, newScope=-1):
+    global location
+    try:
+        int(name)
+        return
+    except ValueError:
+        if name in BucketList[scope]:
+            if BucketList[scope][name][-1] != lineno:
+                BucketList[scope][name].append(lineno)
+        else:
+            location = location + 1
+            BucketList[scope][name] = [location, tipo, newScope, lineno]
 
-# Function st_lookup returns the memory 
+
+# Function st_lookup returns the memory
 # location of a variable or -1 if not found
 def st_lookup(name):
-    if name in BucketList:
-        return BucketList[name][0]
-    else:
-        return -1
+    for node in range(1, len(stackArray)+1):
+        if name in BucketList[stackArray[(-node)]]:
+            return stackArray[-node]
+    return stackArray[-1]
+
 
 # Procedure printSymTab prints a formatted 
 # listing of the symbol table contents 
 # to the listing file
 def printSymTab():
-    print("Variable Name  Location   Line Numbers")
-    print("-------------  --------   ------------")
-    for name in BucketList:
-        if name != None:
-            #print(f'{name:15}{BucketList[name][0]:8d}', end = '')
-            print(name, " "*15, BucketList[name][0], " "*8, end = '')
-            for i in range(len(BucketList[name])-1):
-                #print(f'{BucketList[name][i+1]:4d}', end = '')
-                print(BucketList[name][i+1]," ", end = '')
-            print()
+    print("\n Symbol Table : \n")
+    print("Variable Name    Location    Scope   Type")
+    print("-------------    --------    -----   ---------")
+    for scope in BucketList:
+        for name in BucketList[scope]:
+            if BucketList[scope][name][1] != None:
+                loc = BucketList[scope][name][3]
+                scp = BucketList[scope][name][1]
+                print(name, " "*(17-len(name)), loc, " "*(10-len(str(loc))),
+                      scope, " "*(5-len(str(scope))), scp.name)
