@@ -49,7 +49,6 @@ def st_lookup(name):
 # listing of the symbol table contents 
 # to the listing file
 def printSymTab():
-    print("\n Symbol Table : \n")
     print("Variable Name    Location    Scope   Type")
     print("-------------    --------    -----   ---------")
     for scope in BucketList:

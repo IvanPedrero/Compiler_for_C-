@@ -6,6 +6,7 @@ Error = False
 
 originalTree = None
 
+programa = None
 
 def buildSymtab(t):
     global scope
@@ -88,7 +89,8 @@ def buildSymtab(t):
 
                     if BucketList[st_lookup(t.name)][t.name][0] == "":
 
-                        typeError(t, "Use of a variable not defined previously")
+                        typeError(
+                            t, "Use of a variable not defined previously")
 
             if(t.exp == ExpKind.AssignK):
 
@@ -135,7 +137,33 @@ def buildSymtab(t):
 def typeError(t, message):
     global Error
     Error = True
-    print("Type error at line", t.lineno, ":", message)
+    detectError(t, t.lineno, message)
+
+
+def detectError(t, lineno, message):
+
+    import Parser
+
+    indicator = ""
+
+    lookup = ""
+
+    line = Parser.programa.split("\n")[lineno-1]
+
+    if t.name != None:
+        lookup = t.name
+        errorIndex = line.find(lookup) 
+        indicator += (' '*errorIndex) + "^"
+
+    else:
+        lookup = line
+        errorIndex = line.find(lookup) 
+        indicator = ""
+
+    print("\n\nTraceback (most recent call last):")
+    print ("Line ", lineno ,": ", message)
+    print(line.replace('$', ''))
+    print(indicator,"\n")
 
 
 def typeCheck(syntaxTree):
@@ -291,17 +319,26 @@ def getFunctionReturnType(name):
 
 
 def semantica(t, imprime=True):
+    global programa
     global originalTree
     global Error
 
     originalTree = t
 
+    status = ""
+
     buildSymtab(t)
-    
+
     typeCheck(t)
 
-    if(imprime):
-        if Error == True:
-            print("Status aborted!")
-        else:
+    if not Error:
+        status = "Finished"
+
+        if imprime:
+            print("\n Symbol Table : \n")
             printSymTab()
+    else:
+        status = "Finished with errors"         
+
+    print("\n- Symbol table construction status : "+ status +" -")
+            
