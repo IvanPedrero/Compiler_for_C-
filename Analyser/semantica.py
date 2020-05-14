@@ -156,10 +156,13 @@ def buildSymtab(t):
 # This function will set the error flag
 # that indicates there was a semantic
 # error.
-def typeError(t, message):
+def typeError(t, message, linenoOverride=-1):
     global Error
     Error = True
-    detectError(t, t.lineno, message)
+    if linenoOverride == -1:
+        detectError(t, t.lineno, message)
+    else:
+        detectError(t, linenoOverride, message)
 
 
 # Procedure that will print where
@@ -238,13 +241,18 @@ def checkNode(t):
 
         if t.stmt == StmtKind.IfK:
 
-            if t.child[0].expressionType != ExpType.Integer:
-                typeError(t, "If expression not an integer")
+            if t.child[0].op in [TokenType.PLUS, TokenType.MINUS, TokenType.MULT, TokenType.DIVISION, TokenType.EQUAL]:
+                typeError(t, "If expression not boolean", t.child[0].child[0].lineno)
+            elif t.child[0].expressionType != ExpType.Integer:
+                typeError(t, "If expression not an integer", t.child[0].child[0].lineno)
 
         elif t.stmt == StmtKind.WhileK:
 
             if t.child[0].expressionType != ExpType.Integer:
                 typeError(t, "While expression not an integer")
+
+            elif t.child[0].op in [TokenType.PLUS, TokenType.MINUS, TokenType.MULT, TokenType.DIVISION]:
+                typeError(t, "While expression not boolean")
 
         elif t.stmt == StmtKind.CallK:
 
