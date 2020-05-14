@@ -248,11 +248,11 @@ def checkNode(t):
 
         elif t.stmt == StmtKind.WhileK:
 
-            if t.child[0].expressionType != ExpType.Integer:
+            if t.child[0].op in [TokenType.PLUS, TokenType.MINUS, TokenType.MULT, TokenType.DIVISION, TokenType.EQUAL]:
+                typeError(t, "While expression not boolean")
+            elif t.child[0].expressionType != ExpType.Integer:
                 typeError(t, "While expression not an integer")
 
-            elif t.child[0].op in [TokenType.PLUS, TokenType.MINUS, TokenType.MULT, TokenType.DIVISION]:
-                typeError(t, "While expression not boolean")
 
         elif t.stmt == StmtKind.CallK:
 
