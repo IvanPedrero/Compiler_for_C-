@@ -56,6 +56,10 @@ def buildSymtab(t):
 
                 if t.variableDataType == TokenType.INT:
 
+                    if checkIfInTable(t.name, scope):
+                        typeError(
+                            t, "Variable is already defined")
+
                     st_insert(t.name, ExpType.Integer, t.lineno, scope)
 
                 elif t.variableDataType == TokenType.VOID:

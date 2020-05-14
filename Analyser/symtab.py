@@ -45,6 +45,14 @@ def st_lookup(name):
     return stackArray[-1]
 
 
+# This function will check if a given variable 
+# in a given scope already defined.
+def checkIfInTable(name, actualScope):
+    if name in BucketList[actualScope]:
+        return True
+    return False
+
+
 # Procedure printSymTab prints a formatted 
 # listing of the symbol table contents 
 # to the listing file
