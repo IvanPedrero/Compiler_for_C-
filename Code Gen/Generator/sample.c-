@@ -10,6 +10,7 @@ int minloc (int a [], int low, int high )
   int i;
   int x;
   int k;
+  a = low;
   k = low;
   x = a[low];
   i = low + 1;

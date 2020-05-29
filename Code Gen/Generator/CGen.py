@@ -1,4 +1,5 @@
 from globalTypes import *
+from semantica import *
 
 Error = False
 
@@ -8,8 +9,15 @@ STACKMARKSIZE = 8
 
 output = ""
 
+genComments = False
+
+originalTree = None
+
 
 def codeGen(syntaxTree, fileName):
+    global originalTree
+
+    originalTree = syntaxTree
 
     output = open(fileName, "w")
 
@@ -28,7 +36,7 @@ def codeGen(syntaxTree, fileName):
         calcSizeAttribute(syntaxTree)
         calcStackOffsets(syntaxTree)
 
-        genProgram(syntaxTree, fileName, "output")
+        genProgram(syntaxTree, output, "output")
 
 
 def calcAsmAttribute(tree):
@@ -62,8 +70,11 @@ def calcAsmAttribute(tree):
                 asmArea = asmInThisFunc
 
         if tree.nodekind == NodeKind.DecK and tree.dec == DecKind.FuncDecK:
-            print("*** Calculated assemblySize attribute for ",
-                  tree.name + " as ", asmArea, "\n")
+
+            if genComments:
+                print("*** Calculated assemblySize attribute for ",
+                    tree.name + " as ", asmArea, "\n")
+
             tree.assemblyAreaSize = asmArea
 
         tree = tree.sibling
@@ -98,8 +109,9 @@ def calcSizeAttribute(syntaxTree):
 
         if syntaxTree.nodekind == NodeKind.DecK and syntaxTree.dec == DecKind.FuncDecK:
 
-            print("*** Calculated local size attribute for ",
-                  syntaxTree.name + " as ", size, "\n")
+            if genComments:
+                print("*** Calculated local size attribute for ",
+                    syntaxTree.name + " as ", size, "\n")
 
             syntaxTree.localSize = size
 
@@ -131,28 +143,34 @@ def calcStackOffsets(syntaxTree):
                 syntaxTree.offset = AP
                 AP += varSize(syntaxTree)
 
-                print("*** Calculated offset attribute for ",
-                      syntaxTree.name + " as ", syntaxTree.offset, "\n")
+                if genComments:
+                    print("*** Calculated offset attribute for ",
+                        syntaxTree.name + " as ", syntaxTree.offset, "\n")
 
             else:
 
                 LP -= varSize(syntaxTree)
                 syntaxTree.offset = LP
-
-                print("*** Calculated offset attribute for ",
-                      syntaxTree.name + " as ", syntaxTree.offset, "\n")
+            
+                if genComments:
+                    print("*** Calculated offset attribute for ",
+                        syntaxTree.name + " as ", syntaxTree.offset, "\n")
 
         syntaxTree = syntaxTree.sibling
 
 
 def genComment(comment):
     global output
-    output += "# " + comment + "\n"
+
+    if genComments:
+        output += "# " + comment + "\n"
 
 
 def genCommentSeparator():
     global output
-    output += "##################################################\n"
+
+    if genComments:
+        output += "##################################################\n"
 
 
 def genTopLevelDecl(tree):
@@ -195,7 +213,6 @@ def genTopLevelDecl(tree):
 
 
 def genFunction(tree):
-    print("Entered function for " + tree.name)
     global output
 
     commentBuffer = ""
@@ -274,34 +291,323 @@ def genFunctionLocals2(tree):
 
 
 
-# Line 575
 def genStatement(tree):
-    pass
+    
+    current = None
+
+    current = tree
+
+    while current != None:
+
+        # Assignment
+        if current.nodekind == NodeKind.ExpK and current.exp == ExpKind.AssignK:
+            genComment("** assignment statement*")
+	    
+            genComment("evaluate rvalue as value")
+            genExpression(current.child[1], False)
+            
+            genComment("evaluate lvalue as address")
+            genExpression(current.child[0], True)
+            
+            genInstruction("assignW")
+        
+        # Statements
+        elif current.nodekind == NodeKind.StmtK:
+
+            if current.stmt == StmtKind.IfK:
+                genIfStmt(current)
+            
+            elif current.stmt == StmtKind.WhileK:
+                genWhileStmt(current)
+            
+            elif current.stmt == StmtKind.ReturnK:
+                genReturnStmt(current)
+            
+            elif current.stmt == StmtKind.CallK:
+                genCallStmt(current)
+
+            elif current.stmt == StmtKind.CompoundK:
+                genStatement(current.child[1])
+        
+        current = current.sibling
 
 
+def genExpression(tree, addressNeeded):
+    
+    scratch = ""
+
+    # if it's an expression, eval as expression...
+    if tree.nodekind == NodeKind.ExpK:
+
+        if tree.exp == ExpKind.IdK:
+
+            if tree.declaration != None:
+
+                if tree.declaration.dec == DecKind.ArrayDecK: # Declaration?
+
+                    if(tree.child[0] == None):
+                        
+                        genComment("leave address of array on stack")
+
+                        if (tree.declaration.isGlobal):
+                        
+                            genComment("push address of global variable")
+                            scratch += "pshAdr  _" + tree.declaration.name
+                            genInstruction(scratch)
+
+                        elif tree.declaration.isParameter:
+                            scratch += "pshAP   " + str(tree.declaration.offset)
+                            genInstruction(scratch)
+                            genInstruction("derefW")
+
+                        else:
+                            scratch += "pshLP   " + str(tree.declaration.offset)
+                            genInstruction(scratch)
+
+                    else:
+                        genComment("calculate array offset")
+                        genExpression(tree.child[0], False)
+                        genInstruction("pshLit  4")
+                        genInstruction("mul     noTrap")
+
+                        genComment("get address of array onto stack")
+                        if tree.declaration.isGlobal:
+                            genComment("push address of global variable")
+                            scratch += "pshAdr  _" + tree.declaration.name
+                            genInstruction(scratch)
+
+                        elif tree.declaration.isParameter :
+                            scratch += "pshAP   " + str(tree.declaration.offset)
+                            genInstruction(scratch)
+                            genInstruction("derefW")
+
+                        else :
+                            scratch += "pshLP   " + str(tree.declaration.offset)
+                            genInstruction(scratch)
+                        
+                        
+                        
+                        genComment("index into array")
+                        genInstruction("add     noTrap")
+                        
+                        
+                        if not addressNeeded:
+                            genComment("dereference resulting address")
+                            genInstruction("derefW")
+
+                elif tree.declaration.dec == DecKind.ScalarDecK:
 
 
+                    genComment("calculate effective address of variable")
+
+                    if tree.declaration.isGlobal:
+                        genComment("push address of global variable")
+                        scratch += "pshAdr  _" + tree.declaration.name
+
+                    elif tree.declaration.isParameter:
+                        genComment("push parm address")
+                        scratch += "pshAP   " + str(tree.declaration.offset)
+                    
+                    else:
+                        genComment("push address of local")
+                        scratch += "pshLP   " + str(tree.declaration.offset)
+                    
+                    
+                    genInstruction(scratch)
+                    
+                    if not addressNeeded:
+                        genInstruction("derefW")
+                    
+        elif tree.exp == ExpKind.OpK:
+
+            genExpression(tree.child[0], False)
+            genExpression(tree.child[1], False)
+            
+            if tree.op == TokenType.PLUS:
+                genInstruction("add     noTrap")
+            
+            elif tree.op == TokenType.MINUS:
+                genInstruction("sub     noTrap")
+            
+            elif tree.op == TokenType.MULT:
+                genInstruction("mul     noTrap")
+            
+            elif tree.op == TokenType.DIVISION:
+                genInstruction("div     noTrap")
+            
+            elif tree.op == TokenType.LESS:
+                genInstruction("intLS")
+            
+            elif tree.op == TokenType.GREATER:
+                genInstruction("intGT")
+            
+            elif tree.op == TokenType.DIFFERENT:
+                genInstruction("relNE")
+            
+            elif tree.op == TokenType.LESS_EQUAL:
+                genInstruction("intLE")
+            
+            elif tree.op == TokenType.GREATER_EQUAL:
+                genInstruction("intGE")
+            
+            elif tree.op == TokenType.EQUALS_TO:
+                genInstruction("relEQ")
+            
+            else:
+                print("Non exixtent operation, exiting...")
+                exit()
+            
+        elif tree.exp == ExpKind.ConstK:
+
+            scratch += "pshLit  " + tree.val
+            genInstruction(scratch)
+        
+        elif tree.exp == ExpKind.AssignK:
+
+            genComment("calculate the rvalue of the assignment")
+            genExpression(tree.child[1], False)
+            genInstruction("dup1")
+
+            genComment("calculate the lvalue of the assignment")
+            genExpression(tree.child[0], True)
+
+            genComment("perform assignment")
+            genInstruction("assignW")
+
+    elif tree.nodekind == NodeKind.StmtK:
+        
+        if tree.stmt == StmtKind.CallK:
+
+            genCallStmt(tree)
+            if tree.functionReturnType != ExpType.Void:
+                genInstruction("pshRetW")
 
 
+nextLabel = 0
+def genNewLabel():
+    global nextLabel
+
+    labelBuffer = ""
+
+    nextLabel += 1
+
+    labelBuffer += "label" + str(nextLabel)
+    return labelBuffer
 
 
+def genInstruction(instruction):
+    global output
+
+    output += "        " + instruction + "\n"
 
 
+def genIfStmt(tree):
+    global output
+
+    elseLabel = ""
+    endLabel = ""
+    scratch = ""
+    
+    elseLabel = genNewLabel()
+    endLabel = genNewLabel()
+
+    genComment("IF statement")
+    genComment("if false, jump to else-part")
+    genExpression(tree.child[0], False)
+
+    scratch += "brFalse " + elseLabel
+    genInstruction(scratch)
+    
+    genStatement(tree.child[1])
+    scratch += " branch " + endLabel
+    genInstruction(scratch)
+    
+    output += elseLabel + ":\n" 
+
+    genStatement(tree.child[2])
+
+    output += endLabel + ":\n"
 
 
-def genProgram(tree, fileName, moduleName):
+def genWhileStmt(tree):
+    global output
+    
+    startLabel = ""
+    endLabel = ""
+    scratch = ""
+
+    startLabel = genNewLabel()
+    endLabel = genNewLabel()
+
+    genComment("WHILE statement")
+    genComment("if expression evaluates to FALSE, exit loop")
+
+    output += startLabel + ":\n"
+
+    genExpression(tree.child[0], False)
+
+    scratch += "brFalse  " + endLabel
+    genInstruction(scratch)
+    
+    genStatement(tree.child[1])
+
+    scratch += " branch  " + startLabel
+    genInstruction(scratch)
+
+    output += endLabel + ":\n"
+
+
+def genReturnStmt(tree):
+
+    if tree.functionReturnType != ExpType.Void:
+
+        if tree.child[0] != None:
+            genExpression(tree.child[0], False)
+
+        else:
+            genInstruction("pshLit  0")
+
+        genInstruction("popRetW");	
+
+    genInstruction("exit")
+
+
+def genCallStmt(tree):
+    numPars = 0
+    argPtr = None
+    scratch = ""
+
+    argPtr = tree.child[0]
+
+    while argPtr != None:
+
+        genExpression(argPtr, False)
+        scratch += "mkPar   4," + str(numPars*4)
+        genInstruction(scratch)
+
+        numPars += 1
+        argPtr = argPtr.sibling
+    
+    scratch, "call    _" + tree.name + "," + str(numPars)
+    genInstruction(scratch)
+
+
+def genProgram(tree, file, moduleName):
 
     global output
 
     output += ".TITLE " + moduleName + "\n"
-    output += ".FILE \\" + fileName + "\\ \n\n"
+    output += ".FILE \\" + file.name + "\\ \n\n"
     output += ".EXPORT _main\n\n"
     output += ".IMPORT _input\n"
     output += ".IMPORT _output\n\n"
 
     genTopLevelDecl(tree)
 
-    print(output)
+    # print(output)
+
+    file.write(output)
+
 
 
 def varSize(tree):

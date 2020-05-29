@@ -50,7 +50,7 @@ def buildSymtab(t):
                     elif t.functionReturnType == TokenType.VOID:
                         returnType = ExpType.Void
 
-                    st_insert(t.name, returnType,
+                    st_insert(t, returnType,
                               t.lineno, stackArray[0], scope+1)
 
                     scope = scope + 1
@@ -67,7 +67,7 @@ def buildSymtab(t):
                         typeError(
                             t, "Variable is already defined")
 
-                    st_insert(t.name, ExpType.Integer, t.lineno, scope)
+                    st_insert(t, ExpType.Integer, t.lineno, scope)
 
                 elif t.variableDataType == TokenType.VOID:
 
@@ -80,7 +80,7 @@ def buildSymtab(t):
 
                 if t.variableDataType == TokenType.INT:
 
-                    st_insert(t.name, ExpType.Integer, t.lineno, scope)
+                    st_insert(t, ExpType.Integer, t.lineno, scope)
 
                 elif t.variableDataType == TokenType.VOID:
 
@@ -97,15 +97,15 @@ def buildSymtab(t):
 
                     if t.child[0].name == None:
 
-                        st_insert(t.child[1].name, None, t.lineno, st_lookup(
+                        st_insert(t.child[1], None, t.lineno, st_lookup(
                             t.child[1].name))
 
-                        st_insert(t.child[2].name, None, t.lineno, st_lookup(
+                        st_insert(t.child[2], None, t.lineno, st_lookup(
                             t.child[2].name))
 
                     else:
 
-                        st_insert(t.child[0].name, None, t.lineno, st_lookup(
+                        st_insert(t.child[0], None, t.lineno, st_lookup(
                             t.child[0].name))
 
                     isNodeParent = False
@@ -114,7 +114,7 @@ def buildSymtab(t):
 
                 if t.name != None:
 
-                    st_insert(t.name, None, t.lineno,
+                    st_insert(t, None, t.lineno,
                               st_lookup(t.name))
 
                     if BucketList[st_lookup(t.name)][t.name][0] == None:
@@ -362,6 +362,26 @@ def getFunctionReturnType(name):
     originalTree = t
 
 
+def markGlobals(syntaxTree):
+
+    cursor = None
+    
+    cursor = syntaxTree
+
+    while (cursor != None):
+    
+        if ((cursor.nodekind == NodeKind.DecK)and
+            ((cursor.dec == DecKind.ScalarDecK)or
+            (cursor.dec == DecKind.ArrayDecK))):
+            
+            # print("\n*** Marked "+cursor.name+" as a global variable\n")
+            
+            cursor.isGlobal = True
+        
+        
+        cursor = cursor.sibling
+
+
 # Driver function called from the main
 # file that runs the compiler. It will
 # call the functions that build the table
@@ -378,6 +398,7 @@ def semantica(t, imprime=True):
     print("\nBuilding symbol table...")
 
     buildSymtab(t)
+    markGlobals(t)
 
     print("\nPerforming type check...")
 
@@ -393,3 +414,9 @@ def semantica(t, imprime=True):
         status = "Finished with errors"
 
     print("\n- Semantic analysis status : " + status + " -")
+
+    ''' for scope in Declarations:
+        for name in Declarations[scope]:
+            temp_tree = Declarations[scope][name]
+            print("Declaration of : " + name + " in scope " + str(scope) +
+                    " at line " + str(Declarations[scope][name].lineno)) '''

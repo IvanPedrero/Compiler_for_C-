@@ -124,3 +124,5 @@ class TreeNode:
         self.assemblyAreaSize = None
         self.localSize = None
         self.offset = None
+        self.declarationLine = None
+        self.declaration = None

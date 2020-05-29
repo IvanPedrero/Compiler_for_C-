@@ -9,6 +9,8 @@ BucketList = {
     }
 }
 
+Declarations = {}
+
 # Current location of a node
 location = 0
 
@@ -24,18 +26,48 @@ scope = 0
 # first time, otherwise ignored
 
 
-def st_insert(name, symbolType, lineno, scope, newScope=-1):
+def st_insert(tree, symbolType, lineno, scope, newScope=-1):
     global location
+
+    if tree == None:
+        return
+
     try:
-        int(name)
+        int(tree.name)
         return
     except ValueError:
-        if name in BucketList[scope]:
-            if BucketList[scope][name][-1] != lineno:
-                BucketList[scope][name].append(lineno)
+        if tree.name in BucketList[scope]:
+            if BucketList[scope][tree.name][-1] != lineno:
+                BucketList[scope][tree.name].append(lineno)
+                # Return if already defined
+                try:
+                    tree.declarationLine = Declarations[scope][tree.name].lineno
+                    tree.declaration = Declarations[scope][tree.name]
+                    ''' print("\n Using declared variable named [" + tree.name + "] declared in the line " + str(
+                        Declarations[scope][tree.name].lineno)) '''
+                except KeyError:
+                    pass
+
+                return False
         else:
             location = location + 1
-            BucketList[scope][name] = [location, symbolType, newScope, lineno]
+            BucketList[scope][tree.name] = [
+                location, symbolType, newScope, lineno]
+            # Return if first time defined´
+
+            # Add the declarations to a dictionary
+            if type(tree.val) in [int, str] or tree.val == None:
+
+                try:
+                    dic = {tree.name: tree}
+                    Declarations[scope].update(dic)
+                    return
+                except KeyError:
+                    Declarations[scope] = {}
+                    dic = {tree.name: tree}
+                    Declarations[scope].update(dic)
+
+            return True
 
 
 # Function st_lookup returns the memory
