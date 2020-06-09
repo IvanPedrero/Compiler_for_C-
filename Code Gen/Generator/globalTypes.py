@@ -126,3 +126,4 @@ class TreeNode:
         self.offset = None
         self.declarationLine = None
         self.declaration = None
+        self.assignValue = None

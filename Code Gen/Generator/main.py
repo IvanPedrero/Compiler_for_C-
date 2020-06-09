@@ -1,9 +1,9 @@
 from globalTypes import * 
 from Parser import * 
 from semantica import *
-from CGen import *
+from cgen import *
 
-f = open('sample.c-', 'r')
+f = open('gcd.c-', 'r')
 programa = f.read()
 progLong = len(programa)
 programa = programa + '$'

@@ -12,7 +12,6 @@ Error = False
 # of the tree.
 originalTree = None
 
-
 # Function buildSymtab constructs the symbol
 # table by preorder traversal of the syntax tree
 def buildSymtab(t):
@@ -395,12 +394,12 @@ def semantica(t, imprime=True):
 
     status = ""
 
-    print("\nBuilding symbol table...")
+    #print("\nBuilding symbol table...")
 
     buildSymtab(t)
     markGlobals(t)
 
-    print("\nPerforming type check...")
+    #print("\nPerforming type check...")
 
     typeCheck(t)
 

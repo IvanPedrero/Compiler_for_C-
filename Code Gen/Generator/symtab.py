@@ -20,6 +20,14 @@ stackArray = [0]
 # Scope being checked
 scope = 0
 
+WORDSIZE = 4
+
+STACKMARKSIZE = 8
+
+IF_NUMBER = 0
+
+WHILE_NUMBER = 0
+
 # Procedure st_insert inserts line numbers and
 # memory locations into the symbol table
 # loc = memory location is inserted only the
@@ -43,8 +51,7 @@ def st_insert(tree, symbolType, lineno, scope, newScope=-1):
                 try:
                     tree.declarationLine = Declarations[scope][tree.name].lineno
                     tree.declaration = Declarations[scope][tree.name]
-                    ''' print("\n Using declared variable named [" + tree.name + "] declared in the line " + str(
-                        Declarations[scope][tree.name].lineno)) '''
+                    
                 except KeyError:
                     pass
 
@@ -100,3 +107,25 @@ def printSymTab():
                 scp = BucketList[scope][name][1]
                 print(name, " "*(17-len(name)), loc, " "*(10-len(str(loc))),
                       scope, " "*(5-len(str(scope))), scp.name)
+
+
+
+# Procedures for code generation:
+
+def retrieveNodeInformation(name, line):
+
+    for scope in range(len(Declarations)):
+        if Declarations.get(scope) == None:
+            continue
+        for n in Declarations[scope]:
+            if n == name:  # and line in BucketList[scope][name][5]
+                #print(str(Declarations[scope][n].offset) + " " + str(Declarations[scope][n].lineno))
+                return Declarations[scope][n].offset, Declarations[scope][n].lineno
+
+
+def retrieveNodeObject(name, line):
+    for scope in range(len(Declarations)):
+        for node in Declarations[scope]:
+            if node == name:  # and line in  node.lineasDeAparicion:
+                #print(Declarations[scope][node].name)
+                return Declarations[scope][node]

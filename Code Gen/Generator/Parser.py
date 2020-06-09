@@ -559,6 +559,11 @@ def expression():
             if t != None:
                 t.child[0] = lvalue
                 t.child[1] = rvalue
+                if rvalue.val != None:
+                    if type(rvalue.val) == str:
+                        t.child[0].assignValue = int(rvalue.val)
+                    else:
+                        t.child[0].assignValue = rvalue.val
         
         else:
             syntaxError("Unexpected token") 

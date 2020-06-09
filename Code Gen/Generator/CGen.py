@@ -1,625 +1,50 @@
 from globalTypes import *
 from semantica import *
+from symtab import *
 
-Error = False
+TITLE_TAB = "   "
+TEXT_TAB = "        "
+COMMENT_TAB = "                 "
 
-WORDSIZE = 4
+generatedCode = ""
 
-STACKMARKSIZE = 8
-
-output = ""
-
-genComments = False
-
-originalTree = None
-
-
-def codeGen(syntaxTree, fileName):
-    global originalTree
-
-    originalTree = syntaxTree
-
-    output = open(fileName, "w")
-
-    if output == None:
-        Error = True
-        print("Unable to open the file for writing")
-    else:
-        '''
-        There are three attributes that need to be synthesised before
-        code generation can begin.  They're the locals-on-the-stack
-        size, and the "assembly-area" size (assembly area is where
-        parameters for function calls are set up before execution), as
-        well as AP/LP stack-offsets for locals/parameters.
-        '''
-        calcAsmAttribute(syntaxTree)
-        calcSizeAttribute(syntaxTree)
-        calcStackOffsets(syntaxTree)
-
-        genProgram(syntaxTree, output, "output")
-
-
-def calcAsmAttribute(tree):
-    i = 0
-    asmArea = 0
-    asmInThisFunc = 0
-
-    parmPtr = None
-
-    while(tree != None):
-
-        if tree.nodekind == NodeKind.DecK and tree.dec == DecKind.FuncDecK:
-            asmArea = 0
-
-        for i in range(MAXCHILDREN):
-            calcAsmAttribute(tree.child[i])
-
-        if tree.nodekind == NodeKind.StmtK and tree.stmt == StmtKind.CallK:
-
-            asmInThisFunc = 0
-
-            parmPtr = tree.child[0]
-
-            while parmPtr != None:
-
-                asmInThisFunc = asmInThisFunc + WORDSIZE
-
-                parmPtr = parmPtr.sibling
-
-            if asmInThisFunc > asmArea:
-                asmArea = asmInThisFunc
-
-        if tree.nodekind == NodeKind.DecK and tree.dec == DecKind.FuncDecK:
-
-            if genComments:
-                print("*** Calculated assemblySize attribute for ",
-                    tree.name + " as ", asmArea, "\n")
-
-            tree.assemblyAreaSize = asmArea
-
-        tree = tree.sibling
-
-
-def calcSizeAttribute(syntaxTree):
-
-    i = 0
-    size = 0
-
-    while syntaxTree != None:
-
-        if syntaxTree.nodekind == NodeKind.DecK and syntaxTree.dec == DecKind.FuncDecK:
-            size = 0
-
-        for i in range(MAXCHILDREN):
-            calcSizeAttribute(syntaxTree.child[i])
-
-        # Local declaration.
-        if ((syntaxTree.nodekind == NodeKind.DecK)
-            and ((syntaxTree.dec == DecKind.ScalarDecK)
-                 or (syntaxTree.dec == DecKind.ArrayDecK))
-                and (syntaxTree.isParameter == False or syntaxTree.isParameter == None)):
-
-            if syntaxTree.dec == DecKind.ScalarDecK:
-                size = size + WORDSIZE
-
-            elif syntaxTree.dec == DecKind.ArrayDecK:
-                size = size + (WORDSIZE * int(syntaxTree.val))
-
-            syntaxTree.localSize = size
-
-        if syntaxTree.nodekind == NodeKind.DecK and syntaxTree.dec == DecKind.FuncDecK:
-
-            if genComments:
-                print("*** Calculated local size attribute for ",
-                    syntaxTree.name + " as ", size, "\n")
-
-            syntaxTree.localSize = size
-
-        syntaxTree = syntaxTree.sibling
-
-
-def calcStackOffsets(syntaxTree):
+# This function will calculate the offsets of each declaration of the syntax tree.
+def calculateOffsets(tree):
     i = 0
 
+    # Offsets of the variables.
     AP = 0
     LP = 0
 
-    while syntaxTree != None:
-
-        if syntaxTree.nodekind == NodeKind.DecK and syntaxTree.dec == DecKind.FuncDecK:
+    while tree != None:
+        if tree.nodekind == NodeKind.DecK and tree.dec == DecKind.FuncDecK:
             AP, LP = 0, 0
 
-        # Visit children nodes.
         for i in range(MAXCHILDREN):
-            calcStackOffsets(syntaxTree.child[i])
+            calculateOffsets(tree.child[i])
 
         # Post-order:
-        if ((syntaxTree.nodekind == NodeKind.DecK) and
-            ((syntaxTree.dec == DecKind.ArrayDecK)
-             or (syntaxTree.dec == DecKind.ScalarDecK))):
-
-            if syntaxTree.isParameter:
-
-                syntaxTree.offset = AP
-                AP += varSize(syntaxTree)
-
-                if genComments:
-                    print("*** Calculated offset attribute for ",
-                        syntaxTree.name + " as ", syntaxTree.offset, "\n")
-
-            else:
-
-                LP -= varSize(syntaxTree)
-                syntaxTree.offset = LP
-            
-                if genComments:
-                    print("*** Calculated offset attribute for ",
-                        syntaxTree.name + " as ", syntaxTree.offset, "\n")
-
-        syntaxTree = syntaxTree.sibling
-
-
-def genComment(comment):
-    global output
-
-    if genComments:
-        output += "# " + comment + "\n"
-
-
-def genCommentSeparator():
-    global output
-
-    if genComments:
-        output += "##################################################\n"
-
-
-def genTopLevelDecl(tree):
-
-    global output
-
-    current = None
-    commentBuffer = ""
-
-    current = tree
-
-    while current != None:
-
-        if current.nodekind == NodeKind.DecK:
-
-            if current.dec == DecKind.ScalarDecK:
-
-                genCommentSeparator()
-                commentBuffer = "Variable " + current.name + \
-                    " is a scalar of type " + current.variableDataType.name
-                genComment(commentBuffer)
-
-                output += ".VAR\n"
-                output += "    _"+current.name+": .WORD  1\n\n"
-
-            elif current.dec == DecKind.ArrayDecK:
-
-                genCommentSeparator()
-                commentBuffer = "Variable " + current.name + " is an array of type " + \
-                    current.variableDataType.name + " and size " + current.val
-                genComment(commentBuffer)
-
-                output += ".VAR\n"
-                output += "    _"+current.name+": .WORD  "+current.val+"\n\n"
-
-            elif current.dec == DecKind.FuncDecK:
-                genFunction(current)
-
-        current = current.sibling
-
-
-def genFunction(tree):
-    global output
-
-    commentBuffer = ""
-
-    # Node must be a function or a declaration
-    if tree.nodekind == NodeKind.DecK and tree.dec == DecKind.ArrayDecK:
-        return
-
-    genCommentSeparator()
-    commentBuffer = "Function declaration for  " + tree.name
-    genComment(commentBuffer)
-
-    output += "\n"
-
-    # Function header
-    output += ".PROC _" + str(tree.name) + "(.NOCHECK,.SIZE=" + str(tree.localSize) + ",.NODISPLAY,.ASSEMBLY=" + str(tree.assemblyAreaSize) + ")\n"
-
-    # Variables declared
-    genFunctionLocals(tree)
-    output += ".ENTRY\n"
-
-    genStatement(tree.child[1])
-
-    # End of procedure
-    # genInstruction("exit")
-    # genInstruction("endP")
-    output += ".ENDP\n\n"
-
-
-def genFunctionLocals(tree):
-    i = 0
-
-    for i in range(MAXCHILDREN):
-        if tree.child[i] != None:
-            genFunctionLocals2(tree.child[i])
-
-
-def genFunctionLocals2(tree):
-    '''
-    Do a postorder traversal of the syntax tree looking for non-parameter
-    declarations, and emit code to declare them.
-    '''
-    global output
-
-    i = 0
-    offset = 0
-    commentBuffer = ""
-
-    while tree != None:
-
-        for i in range(MAXCHILDREN):
-            genFunctionLocals2(tree.child[i])
-
-        # Postorder operations
-        if tree.nodekind == NodeKind.DecK:
-
-            if not tree.isParameter:
-                commentBuffer += "Local variable \\" + tree.name + "\\"
-                genComment(commentBuffer)
-            else:
-                commentBuffer += "Parameter \\" + tree.name + "\\"
-                genComment(commentBuffer)
-
-        
+        if ((tree.nodekind == NodeKind.DecK) and
+            ((tree.dec == DecKind.ArrayDecK)
+             or (tree.dec == DecKind.ScalarDecK))):
             if tree.isParameter:
-                offset = STACKMARKSIZE
+                tree.offset = AP
+                AP += varSize(tree)
             else:
-                offset = 0
-            
-            offset += tree.offset
-
-            output += "  .LOCAL _" + tree.name + " " + str(offset) + "," + str(varSize(tree)) + " (0,0,0)\n"
-            output += "\n"
-
+                LP -= varSize(tree)
+                tree.offset = LP
         tree = tree.sibling
 
 
-
-def genStatement(tree):
-    
-    current = None
-
-    current = tree
-
-    while current != None:
-
-        # Assignment
-        if current.nodekind == NodeKind.ExpK and current.exp == ExpKind.AssignK:
-            genComment("** assignment statement*")
-	    
-            genComment("evaluate rvalue as value")
-            genExpression(current.child[1], False)
-            
-            genComment("evaluate lvalue as address")
-            genExpression(current.child[0], True)
-            
-            genInstruction("assignW")
-        
-        # Statements
-        elif current.nodekind == NodeKind.StmtK:
-
-            if current.stmt == StmtKind.IfK:
-                genIfStmt(current)
-            
-            elif current.stmt == StmtKind.WhileK:
-                genWhileStmt(current)
-            
-            elif current.stmt == StmtKind.ReturnK:
-                genReturnStmt(current)
-            
-            elif current.stmt == StmtKind.CallK:
-                genCallStmt(current)
-
-            elif current.stmt == StmtKind.CompoundK:
-                genStatement(current.child[1])
-        
-        current = current.sibling
-
-
-def genExpression(tree, addressNeeded):
-    
-    scratch = ""
-
-    # if it's an expression, eval as expression...
-    if tree.nodekind == NodeKind.ExpK:
-
-        if tree.exp == ExpKind.IdK:
-
-            if tree.declaration != None:
-
-                if tree.declaration.dec == DecKind.ArrayDecK: # Declaration?
-
-                    if(tree.child[0] == None):
-                        
-                        genComment("leave address of array on stack")
-
-                        if (tree.declaration.isGlobal):
-                        
-                            genComment("push address of global variable")
-                            scratch += "pshAdr  _" + tree.declaration.name
-                            genInstruction(scratch)
-
-                        elif tree.declaration.isParameter:
-                            scratch += "pshAP   " + str(tree.declaration.offset)
-                            genInstruction(scratch)
-                            genInstruction("derefW")
-
-                        else:
-                            scratch += "pshLP   " + str(tree.declaration.offset)
-                            genInstruction(scratch)
-
-                    else:
-                        genComment("calculate array offset")
-                        genExpression(tree.child[0], False)
-                        genInstruction("pshLit  4")
-                        genInstruction("mul     noTrap")
-
-                        genComment("get address of array onto stack")
-                        if tree.declaration.isGlobal:
-                            genComment("push address of global variable")
-                            scratch += "pshAdr  _" + tree.declaration.name
-                            genInstruction(scratch)
-
-                        elif tree.declaration.isParameter :
-                            scratch += "pshAP   " + str(tree.declaration.offset)
-                            genInstruction(scratch)
-                            genInstruction("derefW")
-
-                        else :
-                            scratch += "pshLP   " + str(tree.declaration.offset)
-                            genInstruction(scratch)
-                        
-                        
-                        
-                        genComment("index into array")
-                        genInstruction("add     noTrap")
-                        
-                        
-                        if not addressNeeded:
-                            genComment("dereference resulting address")
-                            genInstruction("derefW")
-
-                elif tree.declaration.dec == DecKind.ScalarDecK:
-
-
-                    genComment("calculate effective address of variable")
-
-                    if tree.declaration.isGlobal:
-                        genComment("push address of global variable")
-                        scratch += "pshAdr  _" + tree.declaration.name
-
-                    elif tree.declaration.isParameter:
-                        genComment("push parm address")
-                        scratch += "pshAP   " + str(tree.declaration.offset)
-                    
-                    else:
-                        genComment("push address of local")
-                        scratch += "pshLP   " + str(tree.declaration.offset)
-                    
-                    
-                    genInstruction(scratch)
-                    
-                    if not addressNeeded:
-                        genInstruction("derefW")
-                    
-        elif tree.exp == ExpKind.OpK:
-
-            genExpression(tree.child[0], False)
-            genExpression(tree.child[1], False)
-            
-            if tree.op == TokenType.PLUS:
-                genInstruction("add     noTrap")
-            
-            elif tree.op == TokenType.MINUS:
-                genInstruction("sub     noTrap")
-            
-            elif tree.op == TokenType.MULT:
-                genInstruction("mul     noTrap")
-            
-            elif tree.op == TokenType.DIVISION:
-                genInstruction("div     noTrap")
-            
-            elif tree.op == TokenType.LESS:
-                genInstruction("intLS")
-            
-            elif tree.op == TokenType.GREATER:
-                genInstruction("intGT")
-            
-            elif tree.op == TokenType.DIFFERENT:
-                genInstruction("relNE")
-            
-            elif tree.op == TokenType.LESS_EQUAL:
-                genInstruction("intLE")
-            
-            elif tree.op == TokenType.GREATER_EQUAL:
-                genInstruction("intGE")
-            
-            elif tree.op == TokenType.EQUALS_TO:
-                genInstruction("relEQ")
-            
-            else:
-                print("Non exixtent operation, exiting...")
-                exit()
-            
-        elif tree.exp == ExpKind.ConstK:
-
-            scratch += "pshLit  " + tree.val
-            genInstruction(scratch)
-        
-        elif tree.exp == ExpKind.AssignK:
-
-            genComment("calculate the rvalue of the assignment")
-            genExpression(tree.child[1], False)
-            genInstruction("dup1")
-
-            genComment("calculate the lvalue of the assignment")
-            genExpression(tree.child[0], True)
-
-            genComment("perform assignment")
-            genInstruction("assignW")
-
-    elif tree.nodekind == NodeKind.StmtK:
-        
-        if tree.stmt == StmtKind.CallK:
-
-            genCallStmt(tree)
-            if tree.functionReturnType != ExpType.Void:
-                genInstruction("pshRetW")
-
-
-nextLabel = 0
-def genNewLabel():
-    global nextLabel
-
-    labelBuffer = ""
-
-    nextLabel += 1
-
-    labelBuffer += "label" + str(nextLabel)
-    return labelBuffer
-
-
-def genInstruction(instruction):
-    global output
-
-    output += "        " + instruction + "\n"
-
-
-def genIfStmt(tree):
-    global output
-
-    elseLabel = ""
-    endLabel = ""
-    scratch = ""
-    
-    elseLabel = genNewLabel()
-    endLabel = genNewLabel()
-
-    genComment("IF statement")
-    genComment("if false, jump to else-part")
-    genExpression(tree.child[0], False)
-
-    scratch += "brFalse " + elseLabel
-    genInstruction(scratch)
-    
-    genStatement(tree.child[1])
-    scratch += " branch " + endLabel
-    genInstruction(scratch)
-    
-    output += elseLabel + ":\n" 
-
-    genStatement(tree.child[2])
-
-    output += endLabel + ":\n"
-
-
-def genWhileStmt(tree):
-    global output
-    
-    startLabel = ""
-    endLabel = ""
-    scratch = ""
-
-    startLabel = genNewLabel()
-    endLabel = genNewLabel()
-
-    genComment("WHILE statement")
-    genComment("if expression evaluates to FALSE, exit loop")
-
-    output += startLabel + ":\n"
-
-    genExpression(tree.child[0], False)
-
-    scratch += "brFalse  " + endLabel
-    genInstruction(scratch)
-    
-    genStatement(tree.child[1])
-
-    scratch += " branch  " + startLabel
-    genInstruction(scratch)
-
-    output += endLabel + ":\n"
-
-
-def genReturnStmt(tree):
-
-    if tree.functionReturnType != ExpType.Void:
-
-        if tree.child[0] != None:
-            genExpression(tree.child[0], False)
-
-        else:
-            genInstruction("pshLit  0")
-
-        genInstruction("popRetW");	
-
-    genInstruction("exit")
-
-
-def genCallStmt(tree):
-    numPars = 0
-    argPtr = None
-    scratch = ""
-
-    argPtr = tree.child[0]
-
-    while argPtr != None:
-
-        genExpression(argPtr, False)
-        scratch += "mkPar   4," + str(numPars*4)
-        genInstruction(scratch)
-
-        numPars += 1
-        argPtr = argPtr.sibling
-    
-    scratch, "call    _" + tree.name + "," + str(numPars)
-    genInstruction(scratch)
-
-
-def genProgram(tree, file, moduleName):
-
-    global output
-
-    output += ".TITLE " + moduleName + "\n"
-    output += ".FILE \\" + file.name + "\\ \n\n"
-    output += ".EXPORT _main\n\n"
-    output += ".IMPORT _input\n"
-    output += ".IMPORT _output\n\n"
-
-    genTopLevelDecl(tree)
-
-    # print(output)
-
-    file.write(output)
-
-
-
+# This function will return the size of a variable depending on its size.
 def varSize(tree):
 
     size = 0
-
     if tree.nodekind == NodeKind.DecK:
 
         # Normal scalar.
         if tree.dec == DecKind.ScalarDecK:
             size = WORDSIZE
-
         elif tree.dec == DecKind.ArrayDecK:
 
             # Array parameters passed by reference
@@ -627,9 +52,456 @@ def varSize(tree):
                 size = 4
             else:
                 size = WORDSIZE * (int(tree.val))
-
         else:
             size = 0
     else:
         size = 0
     return int(size)
+
+
+# This function will generate MIPS code recursively given a node of the syntax tree.
+def translateCode(tree, imprime=True):
+    global generatedCode
+    
+    isParentTree = True
+
+    if tree == None:
+        return
+
+    if tree.nodekind == NodeKind.DecK:
+
+        if tree.dec == DecKind.FuncDecK:
+
+            # Main function.
+            if tree.name == "main":
+
+                generatedCode += "\n" + TITLE_TAB + \
+                    "main:" + genComment("Driver function")
+                generatedCode += TEXT_TAB + "la $t4 stack\n"
+                generatedCode += TEXT_TAB + "move $fp $sp\n"
+
+                space = 0
+                for scope in range(len(BucketList)):
+                    if scope == 0:
+                        for name in BucketList[scope]:
+                            if BucketList[scope][name][1] == None:
+                                space += WORDSIZE
+
+                generatedCode += TEXT_TAB + \
+                    "addiu $sp $sp -"+str(space)+"\n"
+
+            # Function declarations:
+            else:
+
+                isParentTree = False
+
+                generatedCode += "\n" + TITLE_TAB + tree.name + \
+                    ":" + genComment("Function declaration")
+                generatedCode += TEXT_TAB + "sw $ra 0($sp)\n"
+                generatedCode += TEXT_TAB + "addiu $sp $sp -4\n"
+                generatedCode += TEXT_TAB + "move $fp $sp\n"
+
+                childsInTree = 0
+                node = tree.child[1]
+                while node != None:
+                    childsInTree += 1
+                    node = node.sibling
+
+                node = tree
+                move = 4 * childsInTree + 4
+                generatedCode += TEXT_TAB + "addiu $sp $sp " + str(move) + "\n"
+
+                functionSize = 0
+                while node != None:
+                    if node.functionReturnType == TokenType.INT:
+                        functionSize += 2
+                        offsetSize, _ = retrieveNodeInformation(
+                            node.child[0].name, node.child[0].lineno)
+                        generatedCode += TEXT_TAB + "lw $a0 0($sp)\n"
+                        generatedCode += TEXT_TAB + \
+                            "sw $a0 "+str(offsetSize)+"($fp)\n"
+                        generatedCode += TEXT_TAB + "addiu $sp $sp -4\n"
+                    else:
+                        generatedCode += TEXT_TAB + "addiu $sp $sp -4\n"
+                        functionSize += 1
+
+                    node = node.sibling
+
+                spaceNeeded = 0
+                for scope in range(len(BucketList)):
+                    for node in BucketList[scope]:
+                        if tree.child[0] != None and node == tree.child[0].name:
+                            spaceNeeded += WORDSIZE
+
+                generatedCode += TEXT_TAB + "addiu $sp $sp -4\n"
+                generatedCode += TEXT_TAB + \
+                    "addiu $sp $sp -"+str(spaceNeeded)+"\n"
+
+                translateCode(tree.child[1])
+
+                generatedCode += TEXT_TAB + "lw $ra 4($fp)\n"
+                size = 4 * functionSize + 8
+
+                generatedCode += TEXT_TAB + "addiu $sp $sp "+str(size)+"\n"
+                generatedCode += TEXT_TAB + "lw $fp 0($sp)\n"
+                generatedCode += TEXT_TAB + "jr $ra\n"
+
+                isParentTree = False
+
+        else:
+
+            isParentTree = False
+
+    # Expression statement.
+    elif tree.nodekind == NodeKind.ExpK:
+
+        hasDeclaration = True
+
+        if tree.exp == ExpKind.AssignK:
+
+            isParentTree = False
+
+            if tree.child[0] != None and tree.child[0].declaration != None and tree.child[0].declaration.dec == DecKind.ArrayDecK:
+                node = retrieveNodeObject(tree.child[0].name, tree.lineno)
+
+                if tree.child[0].exp == ExpKind.ConstK:
+
+                    offsetSize = tree.child[0].declaration.offset + \
+                        (4 * int(tree.child[0].child[0].val))
+
+                else:
+                    hasDeclaration = False
+
+                    generatedCode += TEXT_TAB + "move $t5 $a0\n"
+                    translateCode(tree.child[0].child[1])
+                    offsetSize = 4
+                    generatedCode += TEXT_TAB + "mul $a0 $a0 4\n"
+                    generatedCode += TEXT_TAB + "add $t4 $t4 $a0\n"
+                    generatedCode += TEXT_TAB + \
+                        "sw $t5 "+str(offsetSize)+"($t4)\n"
+                    generatedCode += TEXT_TAB + "sub $t4 $t4 $a0\n"
+
+            else:
+                if tree.child[0] != None and tree.child[0].declaration != None:
+
+                    try:
+                        offsetSize, scope = retrieveNodeInformation(
+                            tree.child[0].declaration.name, tree.child[0].declaration.lineno)
+                    except:
+                        offsetSize = 0
+                        scope = 0
+
+                else:
+
+                    try:
+                        offsetSize, scope = retrieveNodeInformation(
+                            tree.name, tree.lineno)
+                    except:
+                        offsetSize = 0
+                        scope = 0
+
+            translateCode(tree.child[1])
+
+            if hasDeclaration:
+                if tree.child[0] != None and tree.child[0].declaration != None and tree.child[0].declaration.isGlobal:
+                    generatedCode += TEXT_TAB + "sw $a0 " + \
+                        str(tree.child[0].declaration.offset)+"($t4)\n"
+                else:
+                    generatedCode += TEXT_TAB + \
+                        "sw $a0 "+str(offsetSize)+"($fp)\n"
+
+        elif tree.exp == ExpKind.IdK:
+
+            offsetSize, scope = retrieveNodeInformation(tree.name, tree.lineno)
+
+            if tree.child[0] != None and tree.child[0].declaration != None and tree.child[0].declaration.isGlobal:
+
+                generatedCode += TEXT_TAB + "lw $a0 " + \
+                    str(tree.child[0].declaration.offset)+"($t4)\n"
+
+            else:
+                generatedCode += TEXT_TAB + "lw $a0 "+str(offsetSize)+"($fp)\n"
+
+        elif tree.exp == ExpKind.OpK:
+
+            isParentTree = False
+
+            translateCode(tree.child[0])
+            generatedCode += TEXT_TAB + "sw $a0 0($sp)\n"
+            generatedCode += TEXT_TAB + "addiu $sp $sp -4\n"
+
+            translateCode(tree.child[1])
+            generatedCode += TEXT_TAB + "lw $t5 4($sp)\n"
+
+            if tree.op == TokenType.MULT:
+                generatedCode += TEXT_TAB + "mul $a0 $t5 $a0\n"
+
+            elif tree.op == TokenType.DIVISION:
+                generatedCode += TEXT_TAB + "div $a0 $t5 $a0\n"
+
+            elif tree.op == TokenType.PLUS:
+                generatedCode += TEXT_TAB + "add $a0 $t5 $a0\n"
+
+            elif tree.op == TokenType.LESS:
+                generatedCode += TEXT_TAB + "sub $a0 $t5 $a0\n"
+
+            generatedCode += TEXT_TAB + "addiu $sp $sp 4\n"
+
+        elif tree.exp == ExpKind.ConstK:
+
+            generatedCode += TEXT_TAB + "li $a0 "+tree.val+"\n"
+
+        elif tree.dec == DecKind.ArrayDecK:
+
+            isParentTree = False
+
+            node = retrieveNodeObject(tree.child[0].name, tree.lineno)
+
+            if tree.child[1].exp == ExpKind.ConstK:
+                index = tree.child[1].val
+                offsetSize = node.offset + (4*int(index))
+                generatedCode += TEXT_TAB + "lw $a0 "+str(offsetSize)+"($t4)\n"
+
+            else:
+
+                translateCode(tree.child[1])
+
+                generatedCode += TEXT_TAB + "mul $a0 $a0 4\n"
+                generatedCode += TEXT_TAB + "add $t4 $t4 $a0\n"
+                generatedCode += TEXT_TAB + "move $t5 $a0\n"
+
+                offsetSize, _ = retrieveNodeInformation(
+                    tree.child[0].name, tree.lineno)
+
+                generatedCode += TEXT_TAB + "lw $a0 "+str(offsetSize)+"($t4)\n"
+                generatedCode += TEXT_TAB + "sub $t4 $t4 $t5\n"
+
+    # Statement expression.
+    elif tree.nodekind == NodeKind.StmtK:
+        global IF_NUMBER
+        global WHILE_NUMBER
+
+        if tree.stmt == StmtKind.IfK or tree.stmt == StmtKind.WhileK:
+
+            isParentTree = False
+
+            if tree.stmt == StmtKind.IfK:
+
+                loopCount = IF_NUMBER
+
+                IF_NUMBER = IF_NUMBER + 1
+
+                conditionalStmt = "if_true_branch_"+str(loopCount)
+
+            else:
+
+                loopCount = WHILE_NUMBER
+
+                WHILE_NUMBER = WHILE_NUMBER + 1
+
+                generatedCode += TEXT_TAB + \
+                    "while_start_"+str(loopCount)+":\n"
+
+                conditionalStmt = "while_"+str(loopCount)
+
+            translateCode(tree.child[0].child[0])
+            generatedCode += TEXT_TAB + "sw $a0 0($sp)\n"
+            generatedCode += TEXT_TAB + "addiu $sp $sp -4\n"
+
+            translateCode(tree.child[0].child[1])
+            generatedCode += TEXT_TAB + "lw $t5 4($sp)\n"
+            generatedCode += TEXT_TAB + "addiu $sp $sp 4\n"
+
+            if tree.child[0].op == TokenType.EQUALS_TO:
+                generatedCode += TEXT_TAB + "beq $a0 $t5 " + \
+                    conditionalStmt + genComment("== comparison", False)
+
+            elif tree.child[0].op == TokenType.LESS:
+                generatedCode += TEXT_TAB + "slt $t6 $t5 $a0\n"
+                generatedCode += TEXT_TAB + "bne $t6 $0 " + \
+                    conditionalStmt + genComment("< comparison", False)
+
+            elif tree.child[0].op == TokenType.LESS_EQUAL:
+                generatedCode += TEXT_TAB + "slt $t6 $a0 $t5\n"
+                generatedCode += TEXT_TAB + "beq $t6 $0 " + \
+                    conditionalStmt + genComment("<= comparison", False)
+
+            elif tree.child[0].op == TokenType.GREATER:
+                generatedCode += TEXT_TAB + "slt $t6 $a0 $t5\n"
+                generatedCode += TEXT_TAB + "bne $t6 $0 " + \
+                    conditionalStmt + genComment("> comparison", False)
+
+            elif tree.child[0].op == TokenType.GREATER_EQUAL:
+                generatedCode += TEXT_TAB + "slt $t6 $t5 $a0\n"
+                generatedCode += TEXT_TAB + "beq $t6 $0 " + \
+                    conditionalStmt + genComment(">= comparison", False)
+
+            elif tree.child[0].op == TokenType.DIFFERENT:
+                generatedCode += TEXT_TAB + "bne $a0 $t5 " + \
+                    conditionalStmt + genComment("!= comparison", False)
+
+            if tree.stmt == StmtKind.IfK:
+
+                generatedCode += TEXT_TAB + \
+                    "if_false_branch_"+str(loopCount)+":\n"
+
+                if tree.child[2] != None:
+                    translateCode(tree.child[2])
+
+                generatedCode += TEXT_TAB + "b end_if_"+str(loopCount)+"\n"
+                generatedCode += TEXT_TAB + \
+                    "if_true_branch_"+str(loopCount)+":\n"
+
+                translateCode(tree.child[0])
+                generatedCode += TEXT_TAB + "end_if_"+str(loopCount)+":\n"
+                translateCode(tree.child[1])
+
+            else:
+                generatedCode += TEXT_TAB + \
+                    "b while_end_"+str(loopCount)+"\n"
+                generatedCode += TEXT_TAB + "while_"+str(loopCount)+":\n"
+
+                translateCode(tree.child[1])
+
+                generatedCode += TEXT_TAB + \
+                    "b while_start_"+str(loopCount)+"\n"
+
+                generatedCode += TEXT_TAB + \
+                    "while_end_"+str(loopCount)+":\n"
+
+        elif tree.stmt == StmtKind.CallK:
+
+            isParentTree = False
+
+            if tree.name == "input":
+                generatedCode += TEXT_TAB + "li $v0 5 \n"
+                generatedCode += TEXT_TAB + "syscall \n"
+                generatedCode += TEXT_TAB + "move $a0 $v0 \n"
+
+            elif tree.name == "output":
+                translateCode(tree.child[0])
+                generatedCode += TEXT_TAB + "li $v0 1 \n"
+                generatedCode += TEXT_TAB + "syscall \n"
+
+            else:
+                generatedCode += TEXT_TAB + "sw $fp 0($sp)\n"
+                generatedCode += TEXT_TAB + "addiu $sp $sp -4\n"
+                comparitionNodes = []
+
+                for scope in range(len(BucketList)):
+                    for n in BucketList[scope]:
+                        if tree.child[0] != None and n == tree.child[0].name:
+                            comparitionNodes.append(tree.child[0])
+                            break
+
+                for scope in range(len(BucketList)):
+                    for n in BucketList[scope]:
+                        if tree.child[0] != None and n == tree.child[0].name:
+                            comparitionNodes.append(tree.child[0])
+
+                treeChild = tree.child[0]
+                for node in comparitionNodes:
+
+                    if node != None and node.dec == DecKind.ArrayDecK:
+
+                        temp = None
+                        for scope in range(len(Declarations)):
+                            for n in Declarations[scope]:
+                                if treeChild != None and n == treeChild.name:
+                                    temp = treeChild
+                                    break
+
+                        generatedCode += TEXT_TAB + "li $a0 0\n"
+                        generatedCode += TEXT_TAB + "sw $a0 0($sp)\n"
+                        generatedCode += TEXT_TAB + "addiu $sp $sp -4\n"
+
+                    elif treeChild != None:
+
+                        if treeChild.exp == ExpKind.ConstK:
+                            generatedCode += TEXT_TAB + "li $a0 "+treeChild.val+"\n"
+
+                        elif treeChild.exp == ExpKind.IdK:
+                            offsetSize, scope = retrieveNodeInformation(
+                                treeChild.name, treeChild.lineno)
+
+                            if tree.child[0] != None and tree.child[0].declaration != None and tree.child[0].declaration.isGlobal:
+                                generatedCode += TEXT_TAB + \
+                                    "lw $a0 "+str(offsetSize)+"($t4)\n"
+                            else:
+                                generatedCode += TEXT_TAB + \
+                                    "lw $a0 "+str(offsetSize)+"($fp)\n"
+
+                        generatedCode += TEXT_TAB + "sw $a0 0($sp)\n"
+                        generatedCode += TEXT_TAB + "addiu $sp $sp -4\n"
+
+                    if treeChild != None:
+                        treeChild = treeChild.sibling
+
+                generatedCode += TEXT_TAB + "jal " + \
+                    tree.name + genComment("Call to function")
+
+    # Call recursively the childs if its a parent.
+    if isParentTree:
+        for child in tree.child:
+            translateCode(child)
+
+    # Call the rest of the tree.
+    translateCode(tree.sibling)
+
+
+# This function will return a comment in MIPS format.
+def genComment(comment, needSpace=True):
+    if needSpace:
+        return COMMENT_TAB + "# " + comment + "\n"
+    else:
+        return "\t\t# " + comment + "\n"
+
+
+# This function will generate the headers of the MIPS program.
+def createHeader():
+    global generatedCode
+
+    generatedCode += ".text\n"
+    generatedCode += TITLE_TAB + ".globl main\n"
+
+
+# This function will generate the footers of the MIPS program.
+def createFooter():
+    global generatedCode
+
+    generatedCode += "\n\n.data\n"
+    generatedCode += TITLE_TAB + "stack: .word 0" + \
+        genComment(
+            "$t4 for stack, $t5 and $t6 for arithmetic/logic operations", False)
+
+
+# This method will generate the file and will print the generated MIPS code given a file name and an extension.
+def createFile(file):
+    global generatedCode
+
+    output = None
+    try:
+        output = open(file, 'w')
+
+        output.write(generatedCode)
+
+    finally:
+        if output is not None:
+            output.close()
+
+
+# Function call to start generating the tree.
+def codeGen(tree, file):
+
+    calculateOffsets(tree)
+
+    createHeader()
+
+    translateCode(tree)
+
+    createFooter()
+
+    createFile(file)
+
+    print("\n- Code generation status : Finished -")
+    print("\n File generated: ", file)
